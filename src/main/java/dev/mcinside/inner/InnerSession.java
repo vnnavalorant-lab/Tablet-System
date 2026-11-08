@@ -5,7 +5,7 @@ import dev.mcinside.MinecraftInside;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.gui.DiffuseLighting;
+import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.gui.screen.Screen;
@@ -14,7 +14,6 @@ import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.VertexSorter;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
@@ -244,7 +243,7 @@ public final class InnerSession {
             fb.resize(w.getFramebufferWidth(), w.getFramebufferHeight(), MinecraftClient.IS_SYSTEM_MAC);
         outer.draw();
         Matrix4f proj = RenderSystem.getProjectionMatrix();
-        VertexSorter sorter = RenderSystem.getVertexSorting();
+        var sorter = RenderSystem.getVertexSorting();
         MatrixStack mv = RenderSystem.getModelViewStack();
         Framebuffer outerFb = client.getFramebuffer();
         mv.push();
@@ -262,7 +261,7 @@ public final class InnerSession {
                     RenderSystem.clear(256, MinecraftClient.IS_SYSTEM_MAC);
                     double sf = w.getScaleFactor();
                     RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0f, (float) (w.getFramebufferWidth() / sf),
-                            (float) (w.getFramebufferHeight() / sf), 0f, 1000f, 21000f), VertexSorter.BY_Z);
+                            (float) (w.getFramebufferHeight() / sf), 0f, 1000f, 21000f), sorter);
                     mv.loadIdentity();
                     mv.translate(0f, 0f, -2000f);
                     RenderSystem.applyModelViewMatrix();
