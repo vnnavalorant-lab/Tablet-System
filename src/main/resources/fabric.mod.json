@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraftinside",
+  "version": "${version}",
+  "name": "Minecraft Inside Minecraft",
+  "description": "Um tablet que roda uma versao simplificada e jogavel de Minecraft dentro do jogo, sem segunda instancia.",
+  "authors": [],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["dev.mcinside.MinecraftInside"],
+    "client": ["dev.mcinside.client.MinecraftInsideClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
