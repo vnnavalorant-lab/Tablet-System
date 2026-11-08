@@ -101,8 +101,10 @@ public final class InnerServer {
         int base = w == server.getOverworld() ? 1_000_000 : 0;
         try {
             for (int r = 0; r < 12 && spawn == null; r++) {
-                BlockPos c = net.minecraft.server.network.SpawnLocating.findOverworldSpawn(w, base + (r % 4) * 96 - 144, base + (r / 4) * 96 - 96);
-                if (c != null && w.getFluidState(c).isEmpty() && w.getFluidState(c.down()).isEmpty()) spawn = c;
+                int x = base + (r % 4) * 96 - 144, z = base + (r / 4) * 96 - 96;
+                int y = w.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos c = new BlockPos(x, y, z);
+                if (y > w.getBottomY() && w.getFluidState(c.down()).isEmpty() && w.getFluidState(c).isEmpty()) spawn = c;
             }
         } catch (Throwable ignored) { }
         if (spawn == null) spawn = new BlockPos(base, w.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING, base, base), base);
