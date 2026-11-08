@@ -101,7 +101,7 @@ public final class InnerServer {
         int base = w == server.getOverworld() ? 1_000_000 : 0;
         try {
             for (int r = 0; r < 12 && spawn == null; r++) {
-                BlockPos c = net.minecraft.world.SpawnLocating.findOverworldSpawn(w, base + (r % 4) * 96 - 144, base + (r / 4) * 96 - 96);
+                BlockPos c = net.minecraft.server.network.SpawnLocating.findOverworldSpawn(w, base + (r % 4) * 96 - 144, base + (r / 4) * 96 - 96);
                 if (c != null && w.getFluidState(c).isEmpty() && w.getFluidState(c.down()).isEmpty()) spawn = c;
             }
         } catch (Throwable ignored) { }
