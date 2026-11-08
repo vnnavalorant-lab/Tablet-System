@@ -4,6 +4,6 @@
   "package": "dev.mcinside.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": ["MinecraftServerAccess", "ServerWorldMixin"],
-  "client": ["MinecraftClientMixin", "NetworkThreadUtilsMixin", "ClientPlayNetworkHandlerMixin"],
+  "client": ["MinecraftClientMixin", "NetworkThreadUtilsMixin", "ClientPlayNetworkHandlerMixin", "ClientLoginNetworkHandlerMixin"],
   "injectors": { "defaultRequire": 0 }
 }

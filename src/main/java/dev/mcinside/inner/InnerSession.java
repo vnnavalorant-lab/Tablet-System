@@ -74,6 +74,8 @@ public final class InnerSession {
     public ClientWorld world() { return world; }
     public Framebuffer framebuffer() { return fb; }
 
+    public boolean ownsConnection(ClientConnection c) { return c != null && c == connection; }
+
     /** Chamado pelos mixins: este listener é do jogo interno? */
     public boolean owns(Object listener) {
         if (connection == null || !(listener instanceof ClientPlayNetworkHandler h)) return false;

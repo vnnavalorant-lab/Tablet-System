@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class NetworkThreadUtilsMixin {
     /** Pacotes do cliente interno são tratados na thread principal, dentro do contexto interno. */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    @Inject(method = "forceMainThread",
+    @Inject(method = "forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V",
             at = @At("HEAD"), cancellable = true)
     private static void mci$force(Packet packet, PacketListener listener, ThreadExecutor engine, CallbackInfo ci) throws OffThreadException {
         InnerSession s = InnerSession.ACTIVE;
