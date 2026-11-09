@@ -4,17 +4,29 @@
   "version": "${version}",
   "name": "Tablet Inception",
   "description": "Um tablet que acessa um Minecraft dentro do Minecraft. Inspirado no Project Inception.",
-  "authors": ["Voce"],
+  "authors": [
+    "Voce"
+  ],
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.example.tabletinception.TabletInceptionMod"],
-    "client": ["com.example.tabletinception.client.TabletInceptionClient"]
+    "main": [
+      "com.example.tabletinception.TabletInceptionMod"
+    ],
+    "client": [
+      "com.example.tabletinception.client.TabletInceptionClient"
+    ]
   },
   "depends": {
     "fabricloader": ">=0.15.0",
     "minecraft": "~1.20.1",
     "java": ">=17",
     "fabric-api": "*"
-  }
+  },
+  "mixins": [
+    {
+      "config": "tablet_inception.mixins.json",
+      "environment": "client"
+    }
+  ]
 }

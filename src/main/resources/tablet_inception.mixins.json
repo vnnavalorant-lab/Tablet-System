@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.example.tabletinception.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "KeyboardInvoker",
+    "MixinMinecraftClient",
+    "MixinWindow",
+    "MouseInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
