@@ -44,4 +44,11 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
 
 
 ## Apps extras da tela inicial
-Relogio, Crafting, Notas, Livros, Raio, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao). A tela inicial e uma grade que quebra linha conforme a largura.
+Relogio, Crafting, Notas, Livros, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao), exceto **Ajustes**. A tela inicial e uma grade que quebra linha conforme a largura.
+
+
+## Ajustes: papel de parede
+Abra o app **Ajustes** -> **Escolher imagem** (seletor de arquivos do sistema) ou arraste uma imagem (png, jpg, bmp, gif) do PC para a tela do tablet. A imagem e reduzida (max. 1280 px), salva em `config/tablet_inception/wallpaper.png` e usada na tela inicial. **Restaurar padrao** volta ao fundo roxo.
+
+## Ajustes: cores da interface
+Na aba **Cores** de Ajustes voce escolhe a cor do **painel superior** (barra de status) e do **painel lateral** (botoes de navegacao) entre uma paleta de 10 cores; o quadrado com `x` volta ao padrao. As escolhas ficam em `config/tablet_inception/theme.properties`.

@@ -11,10 +11,15 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
+import java.io.File;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -45,7 +50,6 @@ public class TabletScreen extends Screen {
     private static final Identifier ICON_CRAFTING = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/crafting_icon.png");
     private static final Identifier ICON_NOTES = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/notes_icon.png");
     private static final Identifier ICON_BOOKS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/books_icon.png");
-    private static final Identifier ICON_BOLT = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/bolt_icon.png");
     private static final Identifier ICON_SETTINGS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/settings_icon.png");
     private static final Identifier ICON_WEATHER = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/weather_icon.png");
     private static final Identifier SCUTE_SKIN = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_skin.png");
@@ -55,10 +59,11 @@ public class TabletScreen extends Screen {
     private static final int APP_CAMERA = 1;
     private static final int APP_GALLERY = 2;
     private static final int APP_SCUTE = 3;
+    private static final int APP_SETTINGS = 8;   // posicao de "Ajustes" em APP_ICONS/APP_NAMES
     private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE,
-            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_BOLT, ICON_SETTINGS, ICON_WEATHER};
+            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER};
     private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI",
-            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Raio", "Ajustes", "Clima"};
+            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Ajustes", "Clima"};
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -96,7 +101,7 @@ public class TabletScreen extends Screen {
     private static final double MARGIN_BOTTOM = 0.06;
     private static final int HINT_H = 14;
 
-    private enum View { HOME, APP, SCUTE }
+    private enum View { HOME, APP, SCUTE, SETTINGS }
 
     private View view = View.HOME;
 
@@ -124,6 +129,31 @@ public class TabletScreen extends Screen {
     private final int[] meta = new int[3];
 
     private double chatScroll;     // pixels do painel acima do fim da conversa
+
+    // Ajustes (pixels do painel)
+    private static final int PREV_X = CHAT_X1 + 4;
+    private static final int PREV_Y = CHAT_TOP + 18;
+    private static final int PREV_W = 90;
+    private static final int PREV_H = 50;
+    private static final int BTN_X = PREV_X + PREV_W + 8;
+    private static final int BTN_W = CHAT_X2 - BTN_X - 4;
+    private static final int BTN_H = 14;
+    private static final int BTN_PICK_Y = PREV_Y + 4;
+    private static final int BTN_RESET_Y = BTN_PICK_Y + BTN_H + 5;
+    private static final int TAB_Y = CHAT_TOP + 2;
+    private static final int TAB_H = 11;
+    private static final int SW_W = 16;
+    private static final int SW_H = 14;
+    private static final int SW_STEP = 20;
+    private static final int SW_X = CHAT_X1 + 4;
+    private static final int SW_TOP_Y = CHAT_TOP + 28;
+    private static final int SW_SIDE_Y = SW_TOP_Y + 40;
+    private static final String[] TAB_NAMES = {"Papel de parede", "Cores"};
+    private int settingsTab;
+    private volatile Path pendingPick;
+    private volatile boolean picking;
+    private String settingsMsg = "";
+    private int settingsMsgColor = 0xFFA0A8D0;
     private String chatInput = "";
 
     private boolean captured;
@@ -266,6 +296,9 @@ public class TabletScreen extends Screen {
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         this.renderBackground(ctx);
         ScuteAi.tick();
+        Wallpaper.ensureLoaded();
+        Theme.ensureLoaded();
+        applyPendingWallpaper();
 
         ChildManager.Status st = ChildManager.status();
         computeLayout(st);
@@ -281,9 +314,18 @@ public class TabletScreen extends Screen {
 
         if (view == View.HOME) {
             ctx.drawTexture(PANEL, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
+            if (Wallpaper.has()) {
+                drawWallpaper(ctx, SCREEN_X, SCREEN_Y, SCREEN_W, SCREEN_H);
+            }
+            if (Wallpaper.has() || Theme.any()) {
+                // moldura, barra de status e navegacao (com as cores escolhidas) por cima
+                drawBars(ctx);
+            }
             drawHome(ctx, st, panelX(mouseX), panelY(mouseY));
         } else if (view == View.SCUTE) {
             drawScute(ctx);
+        } else if (view == View.SETTINGS) {
+            drawSettings(ctx, panelX(mouseX), panelY(mouseY));
         } else {
             drawApp(ctx, st);
         }
@@ -299,6 +341,8 @@ public class TabletScreen extends Screen {
                                 : "Clique na tela para controlar  |  Esc: fechar o tablet")
                     : view == View.SCUTE
                     ? "Digite e aperte Enter  |  Roda do mouse: rolar  |  Esc: voltar"
+                    : view == View.SETTINGS
+                    ? "Escolha as opcoes com o mouse  |  Esc: voltar"
                     : "Toque em um app para abrir  |  Esc: fechar o tablet";
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, hintY, 0xA0A0A0);
         }
@@ -350,6 +394,244 @@ public class TabletScreen extends Screen {
                 int cy = cellY + cellH - 3;
                 ctx.fill(cx, cy, cx + 2, cy + 2, 0xFFFFFFFF);
             }
+        }
+    }
+
+    // ------------------------------------------------------------------ Ajustes / papel de parede
+
+    /** Desenha o papel de parede cobrindo o retangulo (corta o excesso, sem distorcer). */
+    private void drawWallpaper(DrawContext ctx, int x, int y, int w, int h) {
+        int iw = Wallpaper.width();
+        int ih = Wallpaper.height();
+        double areaAspect = w / (double) h;
+        int rw;
+        int rh;
+        if (iw / (double) ih > areaAspect) {
+            rh = ih;
+            rw = Math.max(1, (int) Math.round(ih * areaAspect));
+        } else {
+            rw = iw;
+            rh = Math.max(1, (int) Math.round(iw / areaAspect));
+        }
+        float u = (iw - rw) / 2f;
+        float v = (ih - rh) / 2f;
+        ctx.drawTexture(Wallpaper.id(), x, y, w, h, u, v, rw, rh, iw, ih);
+    }
+
+    private boolean inRect(double px, double py, int x, int y, int w, int h) {
+        return px >= x && px < x + w && py >= y && py < y + h;
+    }
+
+    private void drawButton(DrawContext ctx, int x, int y, int w, int h, String label, boolean hover, boolean enabled) {
+        int fill = !enabled ? 0xFF222850 : hover ? 0xFF5260B0 : 0xFF3B4A78;
+        drawBubbleBox(ctx, x, y, w, h, fill, enabled ? 0xFF8FA0CC : COLOR_LINE);
+        double k = chatK();
+        drawTextCentered(ctx, Text.literal(label).asOrderedText(), x + w / 2.0,
+                y + (h - 8 * k) / 2.0 + k / 2.0, k, enabled ? 0xFFFFFFFF : 0xFF707AA8);
+    }
+
+    /** Aplica as cores escolhidas (translucidas) e desenha a moldura/barras do tablet por cima. */
+    private void drawBars(DrawContext ctx) {
+        if (Theme.side() != 0) {
+            ctx.fill(NAV_X, SCREEN_Y, NAV_X + NAV_W, SCREEN_Y + SCREEN_H, 0xB0000000 | Theme.side());
+        }
+        if (Theme.top() != 0) {
+            ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + STATUS_H, 0xD0000000 | Theme.top());
+        }
+        ctx.drawTexture(BORDER, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
+    }
+
+    private int tabX(int i) {
+        double k = chatK();
+        int x = CHAT_X1 + 4;
+        for (int j = 0; j < i; j++) {
+            x += (int) Math.ceil(this.textRenderer.getWidth(TAB_NAMES[j]) * k) + 10 + 3;
+        }
+        return x;
+    }
+
+    private int tabW(int i) {
+        return (int) Math.ceil(this.textRenderer.getWidth(TAB_NAMES[i]) * chatK()) + 10;
+    }
+
+    private void drawSettingsTabs(DrawContext ctx, double pmx, double pmy) {
+        for (int i = 0; i < TAB_NAMES.length; i++) {
+            boolean sel = i == settingsTab;
+            int x = tabX(i);
+            int w = tabW(i);
+            boolean hover = inRect(pmx, pmy, x, TAB_Y, w, TAB_H);
+            drawBubbleBox(ctx, x, TAB_Y, w, TAB_H, sel ? 0xFF5260B0 : hover ? 0xFF3B4A78 : 0xFF1B2266,
+                    sel ? 0xFFFFFFFF : COLOR_LINE);
+            double k = chatK();
+            drawTextCentered(ctx, Text.literal(TAB_NAMES[i]).asOrderedText(), x + w / 2.0,
+                    TAB_Y + (TAB_H - 8 * k) / 2.0 + k / 2.0, k, 0xFFFFFFFF);
+        }
+    }
+
+    private void drawSwatchRow(DrawContext ctx, String label, int y, int current, double pmx, double pmy) {
+        double k = chatK();
+        drawText(ctx, Text.literal(label).asOrderedText(), SW_X, y - 11 * k, k, 0xFFFFFFFF);
+        for (int i = 0; i < Theme.PALETTE.length; i++) {
+            int x = SW_X + i * SW_STEP;
+            int rgb = Theme.PALETTE[i];
+            boolean selected = rgb == current;
+            boolean hover = inRect(pmx, pmy, x, y, SW_W, SW_H);
+            ctx.fill(x - 1, y - 1, x + SW_W + 1, y + SW_H + 1,
+                    selected ? 0xFFFFFFFF : hover ? 0xFFA0A8D0 : COLOR_LINE);
+            if (rgb == 0) {
+                ctx.fill(x, y, x + SW_W, y + SW_H, 0xFF361A50);      // cor padrao do tablet
+                drawTextCentered(ctx, Text.literal("x").asOrderedText(), x + SW_W / 2.0,
+                        y + (SW_H - 8 * k) / 2.0 + k / 2.0, k, 0xFFA0A8D0);
+            } else {
+                ctx.fill(x, y, x + SW_W, y + SW_H, 0xFF000000 | rgb);
+            }
+        }
+    }
+
+    private void drawColorsTab(DrawContext ctx, double pmx, double pmy) {
+        double k = chatK();
+        drawSwatchRow(ctx, "Painel superior", SW_TOP_Y, Theme.top(), pmx, pmy);
+        drawSwatchRow(ctx, "Painel lateral", SW_SIDE_Y, Theme.side(), pmx, pmy);
+        int textW = (int) ((CHAT_X2 - SW_X) / k);
+        double ty = SW_SIDE_Y + SW_H + 8;
+        for (OrderedText l : this.textRenderer.wrapLines(
+                Text.literal("Clique em uma cor para aplicar. O quadrado com x volta a cor padrao."), textW)) {
+            drawText(ctx, l, SW_X, ty, k, 0xFFA0A8D0);
+            ty += 9 * k;
+        }
+    }
+
+    /** Trata cliques da tela de Ajustes. Devolve true se o clique foi usado. */
+    private boolean settingsClick(double px, double py) {
+        for (int i = 0; i < TAB_NAMES.length; i++) {
+            if (inRect(px, py, tabX(i), TAB_Y, tabW(i), TAB_H)) {
+                settingsTab = i;
+                return true;
+            }
+        }
+        if (settingsTab == 1) {
+            for (int i = 0; i < Theme.PALETTE.length; i++) {
+                int x = SW_X + i * SW_STEP;
+                if (inRect(px, py, x, SW_TOP_Y, SW_W, SW_H)) {
+                    Theme.setTop(Theme.PALETTE[i]);
+                    return true;
+                }
+                if (inRect(px, py, x, SW_SIDE_Y, SW_W, SW_H)) {
+                    Theme.setSide(Theme.PALETTE[i]);
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (inRect(px, py, BTN_X, BTN_PICK_Y, BTN_W, BTN_H)) {
+            pickWallpaper();
+            return true;
+        }
+        if (inRect(px, py, BTN_X, BTN_RESET_Y, BTN_W, BTN_H) && Wallpaper.has()) {
+            Wallpaper.clear();
+            settingsMsg = "Papel de parede padrao restaurado.";
+            settingsMsgColor = 0xFFA0A8D0;
+            return true;
+        }
+        return false;
+    }
+
+    private void drawSettings(DrawContext ctx, double pmx, double pmy) {
+        final double k = chatK();
+        ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+
+        // cabecalho
+        double hk = k * 1.15;
+        drawTextCentered(ctx, Text.literal("Ajustes").asOrderedText(),
+                (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
+        ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
+
+        drawSettingsTabs(ctx, pmx, pmy);
+        if (settingsTab == 1) {
+            drawColorsTab(ctx, pmx, pmy);
+            drawBars(ctx);
+            return;
+        }
+
+        // pre-visualizacao (moldura + imagem atual ou o fundo padrao)
+        ctx.fill(PREV_X - 1, PREV_Y - 1, PREV_X + PREV_W + 1, PREV_Y + PREV_H + 1, COLOR_LINE);
+        if (Wallpaper.has()) {
+            drawWallpaper(ctx, PREV_X, PREV_Y, PREV_W, PREV_H);
+        } else {
+            ctx.drawTexture(PANEL, PREV_X, PREV_Y, PREV_W, PREV_H, SCREEN_X, SCREEN_Y, SCREEN_W, SCREEN_H, PANEL_W, PANEL_H);
+        }
+
+        boolean hoverPick = inRect(pmx, pmy, BTN_X, BTN_PICK_Y, BTN_W, BTN_H);
+        boolean hoverReset = inRect(pmx, pmy, BTN_X, BTN_RESET_Y, BTN_W, BTN_H);
+        drawButton(ctx, BTN_X, BTN_PICK_Y, BTN_W, BTN_H, picking ? "Escolhendo..." : "Escolher imagem", hoverPick, !picking);
+        drawButton(ctx, BTN_X, BTN_RESET_Y, BTN_W, BTN_H, "Restaurar padrao", hoverReset, Wallpaper.has());
+
+        // mensagem de estado / dica
+        int textW = (int) ((CHAT_X2 - PREV_X) / k);
+        String msg = settingsMsg.isEmpty() ? "Dica: arraste uma imagem (png, jpg, bmp, gif) do PC para esta tela." : settingsMsg;
+        int color = settingsMsg.isEmpty() ? 0xFFA0A8D0 : settingsMsgColor;
+        double ty = PREV_Y + PREV_H + 8;
+        for (OrderedText l : this.textRenderer.wrapLines(Text.literal(msg), textW)) {
+            drawText(ctx, l, PREV_X, ty, k, color);
+            ty += 9 * k;
+        }
+
+        // moldura, barra de status e navegacao por cima
+        drawBars(ctx);
+    }
+
+    /** Abre o seletor de arquivos do sistema (em outra thread, para nao travar o jogo). */
+    private void pickWallpaper() {
+        if (picking) return;
+        picking = true;
+        settingsMsg = "";
+        Runnable task = () -> {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                PointerBuffer filters = stack.mallocPointer(5);
+                filters.put(stack.UTF8("*.png")).put(stack.UTF8("*.jpg")).put(stack.UTF8("*.jpeg"))
+                        .put(stack.UTF8("*.bmp")).put(stack.UTF8("*.gif"));
+                filters.flip();
+                String start = System.getProperty("user.home", "") + File.separator;
+                String res = TinyFileDialogs.tinyfd_openFileDialog("Escolher papel de parede", start,
+                        filters, "Imagens (png, jpg, bmp, gif)", false);
+                if (res != null && !res.isEmpty()) {
+                    pendingPick = Path.of(res);
+                }
+            } catch (Throwable t) {
+                settingsMsg = "Seletor indisponivel. Arraste a imagem para esta tela.";
+                settingsMsgColor = 0xFFFF8080;
+            } finally {
+                picking = false;
+            }
+        };
+        if (System.getProperty("os.name", "").toLowerCase().contains("mac")) {
+            task.run();   // no macOS o seletor precisa rodar na thread principal
+        } else {
+            Thread t = new Thread(task, "tablet-inception-filepicker");
+            t.setDaemon(true);
+            t.start();
+        }
+    }
+
+    /** Aplica (na thread de render) a imagem escolhida no seletor ou arrastada. */
+    private void applyPendingWallpaper() {
+        Path p = pendingPick;
+        if (p == null) return;
+        pendingPick = null;
+        try {
+            Wallpaper.setFromFile(p);
+            settingsMsg = "Papel de parede alterado!";
+            settingsMsgColor = 0xFF80FF90;
+        } catch (Exception e) {
+            settingsMsg = "Nao foi possivel usar essa imagem: " + e.getMessage();
+            settingsMsgColor = 0xFFFF8080;
+        }
+    }
+
+    /** Arrastar um arquivo de imagem para a janela (so na tela de Ajustes). */
+    public void filesDragged(List<Path> paths) {
+        if (view == View.SETTINGS && settingsTab == 0 && paths != null && !paths.isEmpty()) {
+            pendingPick = paths.get(0);
         }
     }
 
@@ -487,7 +769,7 @@ public class TabletScreen extends Screen {
         }
 
         // ---- moldura, barra de status e navegacao por cima
-        ctx.drawTexture(BORDER, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
+        drawBars(ctx);
     }
 
     private void sendChat() {
@@ -505,7 +787,7 @@ public class TabletScreen extends Screen {
             drawPlaceholder(ctx, st);
         }
         // Moldura, barra de status e navegacao por cima do jogo
-        ctx.drawTexture(BORDER, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
+        drawBars(ctx);
     }
 
     private void drawPlaceholder(DrawContext ctx, ChildManager.Status st) {
@@ -595,7 +877,7 @@ public class TabletScreen extends Screen {
             }
             case 1 -> goHome();
             case 2 -> {
-                if (view == View.SCUTE) {
+                if (view == View.SCUTE || view == View.SETTINGS) {
                     goHome();       // o ScuteAI nao tem processo para encerrar
                     return;
                 }
@@ -698,8 +980,15 @@ public class TabletScreen extends Screen {
                 chatScroll = 0;
                 return true;
             }
+            if (app == APP_SETTINGS) {
+                view = View.SETTINGS;
+                return true;
+            }
             if (app >= 0) {
                 return true; // ainda sem funcao
+            }
+            if (view == View.SETTINGS && settingsClick(panelX(mx), panelY(my))) {
+                return true;
             }
         }
         if (view == View.APP && insideApp(mx, my)) {
@@ -776,6 +1065,10 @@ public class TabletScreen extends Screen {
                 }
                 default -> { }
             }
+            return true;
+        }
+        if (view == View.SETTINGS) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) goHome();
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
