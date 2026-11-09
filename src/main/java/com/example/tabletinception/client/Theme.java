@@ -28,7 +28,7 @@ public final class Theme {
             0x5E35B1, // roxo
             0xD81B60, // rosa
             0x212121, // preto
-            0xEEEEEE  // branco
+            0xFFFFFF  // branco (as barras ficam translucidas: 80% em cima, 50% na lateral)
     };
 
     private static int top;
@@ -60,7 +60,8 @@ public final class Theme {
     private static int parse(String s) {
         if (s == null || s.isBlank()) return 0;
         try {
-            return Integer.parseInt(s.trim(), 16) & 0xFFFFFF;
+            int v = Integer.parseInt(s.trim(), 16) & 0xFFFFFF;
+            return v == 0xEEEEEE ? 0xFFFFFF : v;   // branco da versao anterior
         } catch (NumberFormatException e) {
             return 0;
         }
@@ -87,6 +88,10 @@ public final class Theme {
 
     public static int side() {
         return side;
+    }
+
+    public static boolean isWhite(int rgb) {
+        return rgb == 0xFFFFFF;
     }
 
     public static boolean any() {

@@ -44,7 +44,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
 
 
 ## Apps extras da tela inicial
-Relogio, Crafting, Notas, Livros, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao), exceto **Ajustes** e **Clima**. A tela inicial e uma grade que quebra linha conforme a largura.
+Relogio, Musica, Notas, Livros, Ajustes, Clima e App Store (icones 20x20 em `textures/gui/*_icon.png`). A tela inicial e uma grade que quebra linha conforme a largura.
 
 
 ## Ajustes: papel de parede
@@ -73,4 +73,6 @@ Arquivos: `client/WeatherInfo.java` (leitura do clima e textos dos comentarios),
 - **Relogio**: mostra apenas a hora atual (HH:mm:ss) em letras grandes.
 - **Musica**: lista com as musicas do Minecraft (os discos: 13, Cat, Blocks, Chirp, Far, Mall, Mellohi, Stal, Strad, Ward, 11, Wait, Otherside, 5, Pigstep, Relic). Clique em uma para tocar; clicar de novo nela (ou em **Parar**, ou no quadrado de navegacao) para a musica. Se fechar o tablet a musica continua tocando. Para mudar a lista, edite `TRACKS` em `client/MusicPlayer.java`.
 - **Camera**, **Galeria**, **Livros** e **App Store**: mostram "Aplicativo em Desenvolvimento ;(".
-- Os icones novos (`music_icon.png` e `app_store_icon.png`, 20x20) ficam em `textures/gui/`. **Crafting** continua so ilustrativo.
+- O app **Crafting** foi removido; a **Musica** ocupa o lugar dele. Os icones `music_icon.png` e `app_store_icon.png` (20x20) ficam em `textures/gui/`.
+- **Relogio**: cartao com horas e minutos grandes (os dois pontos piscam), segundos menores e uma barra de segundos.
+- **Cores do tablet** (Ajustes > Cores): o painel superior (barra de status) e o painel lateral (botoes) agora sao desenhados por codigo na cor escolhida; `tablet_border.png` ficou so com a moldura e os icones.

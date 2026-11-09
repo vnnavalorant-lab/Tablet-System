@@ -49,7 +49,6 @@ public class TabletScreen extends Screen {
     private static final Identifier ICON_GALLERY = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/gallery_icon.png");
     private static final Identifier ICON_SCUTE = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_ai_icon.png");
     private static final Identifier ICON_CLOCK = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/clock_icon.png");
-    private static final Identifier ICON_CRAFTING = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/crafting_icon.png");
     private static final Identifier ICON_NOTES = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/notes_icon.png");
     private static final Identifier ICON_BOOKS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/books_icon.png");
     private static final Identifier ICON_SETTINGS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/settings_icon.png");
@@ -66,19 +65,18 @@ public class TabletScreen extends Screen {
     private static final int APP_CLOCK = 4;
     private static final int APP_NOTES = 6;
     private static final int APP_BOOKS = 7;
-    private static final int APP_MUSIC = 10;
-    private static final int APP_STORE = 11;
+    private static final int APP_MUSIC = 5;     // ocupa o lugar do antigo Crafting
+    private static final int APP_STORE = 10;
     private static final int APP_SETTINGS = 8;   // posicao de "Ajustes" em APP_ICONS/APP_NAMES
     private static final int APP_WEATHER = 9;    // posicao de "Clima" em APP_ICONS/APP_NAMES
     private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE,
-            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER,
-            ICON_MUSIC, ICON_STORE};
+            ICON_CLOCK, ICON_MUSIC, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER,
+            ICON_STORE};
     private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI",
-            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Ajustes", "Clima",
-            "M\u00fasica", "App Store"};
+            "Rel\u00f3gio", "M\u00fasica", "Notas", "Livros", "Ajustes", "Clima",
+            "App Store"};
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
-    private static final DateTimeFormatter CLOCK_BIG = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     // Medidas das texturas (pixels do painel)
     private static final int PANEL_W = 284;
@@ -417,8 +415,9 @@ public class TabletScreen extends Screen {
     private void drawStatusBar(DrawContext ctx) {
         double k = fontK(statusN());
         double y = SCREEN_Y + (STATUS_H - 8 * k) / 2.0 + k / 2.0;
+        // com a barra branca o horario fica escuro para continuar legivel
         drawText(ctx, Text.literal(LocalTime.now().format(CLOCK)).asOrderedText(),
-                SCREEN_X + 4, y, k, 0xFFFFFFFF);
+                SCREEN_X + 4, y, k, Theme.isWhite(Theme.top()) ? 0xFF1A1A2E : 0xFFFFFFFF);
         // clima atual do jogo (no centro da barra), colorido pela nota: verde = bom, vermelho = ruim
         if (view != View.APP && view != View.WEATHER && this.client.world != null) {
             WeatherInfo w = WeatherInfo.current(this.client);
@@ -495,14 +494,27 @@ public class TabletScreen extends Screen {
                 y + (h - 8 * k) / 2.0 + k / 2.0, k, enabled ? 0xFFFFFFFF : 0xFF707AA8);
     }
 
-    /** Aplica as cores escolhidas (translucidas) e desenha a moldura/barras do tablet por cima. */
+    private static final int DEFAULT_TOP = 0x261833;    // cores padrao das barras
+    private static final int DEFAULT_SIDE = 0x40225B;
+
+    /**
+     * Desenha o painel superior (barra de status) e o painel lateral (navegacao) na cor escolhida em
+     * Ajustes > Cores (ou na cor padrao) e, por cima, a moldura do tablet com os icones.
+     * Sobre o jogo interno e sobre o papel de parede da tela inicial as barras ficam translucidas.
+     */
     private void drawBars(DrawContext ctx) {
-        if (Theme.side() != 0) {
-            ctx.fill(NAV_X, SCREEN_Y, NAV_X + NAV_W, SCREEN_Y + SCREEN_H, 0xB0000000 | Theme.side());
-        }
-        if (Theme.top() != 0) {
-            ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + STATUS_H, 0xD0000000 | Theme.top());
-        }
+        boolean glass = view == View.APP || (view == View.HOME && Wallpaper.has());
+        boolean customTop = Theme.top() != 0;
+        boolean customSide = Theme.side() != 0;
+        int top = customTop ? Theme.top() : DEFAULT_TOP;
+        int side = customSide ? Theme.side() : DEFAULT_SIDE;
+        int topA = glass ? (customTop ? 0xD0 : 0x50) : 0xFF;
+        int sideA = glass ? (customSide ? 0xB0 : 0x19) : 0xFF;
+        // branco: translucido de proposito (80% no painel superior, 50% no lateral)
+        if (Theme.isWhite(Theme.top())) topA = 0xCC;
+        if (Theme.isWhite(Theme.side())) sideA = 0x80;
+        ctx.fill(NAV_X, SCREEN_Y + STATUS_H, NAV_X + NAV_W, SCREEN_Y + SCREEN_H, (sideA << 24) | side);
+        ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + STATUS_H, (topA << 24) | top);
         ctx.drawTexture(BORDER, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
     }
 
@@ -979,13 +991,52 @@ public class TabletScreen extends Screen {
 
     private void drawClock(DrawContext ctx) {
         drawScreenFrame(ctx, "Rel\u00f3gio");
-        String time = LocalTime.now().format(CLOCK_BIG);
-        // letras grandes e nitidas: multiplo inteiro de pixels reais, cabendo na largura da tela
-        double fit = (CHAT_X2 - CHAT_X1 - 20) / (double) Math.max(1, this.textRenderer.getWidth(time));
+        LocalTime now = LocalTime.now();
+        String hh = String.format("%02d", now.getHour());
+        String mm = String.format("%02d", now.getMinute());
+        String ss = String.format("%02d", now.getSecond());
+
+        // letras nitidas: tamanhos multiplos inteiros de pixels reais
+        int cardW = Math.min(CHAT_X2 - CHAT_X1 - 20, 230);
+        double wHH = this.textRenderer.getWidth("00");
+        double wCol = this.textRenderer.getWidth(":");
+        double fit = (cardW - 28) / (2 * wHH + wCol + 0.5 * wHH + 1);
         double k = Math.max(1, Math.floor(Math.min(fit, 6.0) * realS)) / realS;
-        double cx = (CHAT_X1 + CHAT_X2) / 2.0;
-        double cy = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2.0 - 4 * k;
-        drawTextCentered(ctx, Text.literal(time).asOrderedText(), cx, cy, k, 0xFFFFFFFF);
+        double ks = Math.max(1, Math.round(k * realS * 0.5)) / (double) realS;
+
+        int cardH = (int) Math.ceil(8 * k) + 30;
+        int cardX = (CHAT_X1 + CHAT_X2) / 2 - cardW / 2;
+        int cardY = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2 - cardH / 2;
+
+        // cartao: borda dupla + brilho suave no topo
+        drawBubbleBox(ctx, cardX, cardY, cardW, cardH, 0xFF0D1470, 0xFF8FA0CC);
+        drawBubbleBox(ctx, cardX + 2, cardY + 2, cardW - 4, cardH - 4, 0xFF070C3E, 0xFF2A3580);
+        ctx.fill(cardX + 5, cardY + 3, cardX + cardW - 5, cardY + 4, 0xFF3B4A9A);
+
+        // horas : minutos (os dois pontos piscam) + segundos menores, alinhados pela base
+        double totalW = (2 * wHH + wCol) * k + 4 + wHH * ks;
+        double x = cardX + (cardW - totalW) / 2.0;
+        double y = cardY + 9;
+        boolean on = (System.currentTimeMillis() / 500) % 2 == 0;
+        drawText(ctx, Text.literal(hh).asOrderedText(), x, y, k, 0xFFFFFFFF);
+        x += wHH * k;
+        drawText(ctx, Text.literal(":").asOrderedText(), x, y, k, on ? 0xFFFFFFFF : 0xFF4A5590);
+        x += wCol * k;
+        drawText(ctx, Text.literal(mm).asOrderedText(), x, y, k, 0xFFFFFFFF);
+        x += wHH * k + 4;
+        drawText(ctx, Text.literal(ss).asOrderedText(), x, y + 8 * k - 8 * ks, ks, 0xFF9FB0FF);
+
+        // barra dos segundos (com marcas a cada 15 s)
+        int bx1 = cardX + 12;
+        int bx2 = cardX + cardW - 12;
+        int by = cardY + cardH - 10;
+        ctx.fill(bx1, by, bx2, by + 3, 0xFF1B2266);
+        int fillW = (int) ((bx2 - bx1) * (now.getSecond() + 1) / 60.0);
+        ctx.fill(bx1, by, bx1 + fillW, by + 3, 0xFF5E7BFF);
+        for (int i = 0; i <= 4; i++) {
+            int tx = Math.min(bx2 - 1, bx1 + (bx2 - bx1) * i / 4);
+            ctx.fill(tx, by + 4, tx + 1, by + 6, 0xFF8FA0CC);
+        }
         drawBars(ctx);
     }
 
@@ -1315,7 +1366,7 @@ public class TabletScreen extends Screen {
                 return true;
             }
             if (app >= 0) {
-                return true; // ainda sem funcao (Crafting)
+                return true;
             }
             if (view == View.SETTINGS && settingsClick(panelX(mx), panelY(my))) {
                 return true;
