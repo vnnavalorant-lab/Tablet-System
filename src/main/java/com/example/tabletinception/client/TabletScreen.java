@@ -41,6 +41,13 @@ public class TabletScreen extends Screen {
     private static final Identifier ICON_CAMERA = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/camera_icon.png");
     private static final Identifier ICON_GALLERY = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/gallery_icon.png");
     private static final Identifier ICON_SCUTE = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_ai_icon.png");
+    private static final Identifier ICON_CLOCK = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/clock_icon.png");
+    private static final Identifier ICON_CRAFTING = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/crafting_icon.png");
+    private static final Identifier ICON_NOTES = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/notes_icon.png");
+    private static final Identifier ICON_BOOKS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/books_icon.png");
+    private static final Identifier ICON_BOLT = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/bolt_icon.png");
+    private static final Identifier ICON_SETTINGS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/settings_icon.png");
+    private static final Identifier ICON_WEATHER = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/weather_icon.png");
     private static final Identifier SCUTE_SKIN = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_skin.png");
 
     // Apps da tela inicial (na ordem em que aparecem, da esquerda para a direita)
@@ -48,8 +55,10 @@ public class TabletScreen extends Screen {
     private static final int APP_CAMERA = 1;
     private static final int APP_GALLERY = 2;
     private static final int APP_SCUTE = 3;
-    private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE};
-    private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI"};
+    private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE,
+            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_BOLT, ICON_SETTINGS, ICON_WEATHER};
+    private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI",
+            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Raio", "Ajustes", "Clima"};
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -101,6 +110,7 @@ public class TabletScreen extends Screen {
     private int dy;
     private int dw;
     private int dh;
+    private int cols = 1;       // colunas da grade de apps
     private int cellX;       // x da primeira celula; as demais seguem a direita (cellW + APP_GAP)
     private int cellY;
     private int cellW;
@@ -198,6 +208,15 @@ public class TabletScreen extends Screen {
         cellH = 2 + ICON_SIZE + 2 + (int) Math.ceil(8 * kl) + 3;
         cellX = HOME_X + 8;
         cellY = HOME_Y + 8;
+        cols = Math.max(1, (CHAT_X2 - cellX + APP_GAP) / (cellW + APP_GAP));
+    }
+
+    private int appCellX(int i) {
+        return cellX + (i % cols) * (cellW + APP_GAP);
+    }
+
+    private int appCellY(int i) {
+        return cellY + (i / cols) * (cellH + APP_GAP);
     }
 
     // ------------------------------------------------------------------ frames
@@ -312,7 +331,8 @@ public class TabletScreen extends Screen {
     private void drawHome(DrawContext ctx, ChildManager.Status st, double pmx, double pmy) {
         double kl = fontK(labelN());
         for (int i = 0; i < APP_ICONS.length; i++) {
-            int x = cellX + i * (cellW + APP_GAP);
+            int x = appCellX(i);
+            int cellY = appCellY(i);
 
             if (pmx >= x && pmx < x + cellW && pmy >= cellY && pmy < cellY + cellH) {
                 ctx.fill(x, cellY, x + cellW, cellY + cellH, 0x33FFFFFF);
@@ -543,10 +563,10 @@ public class TabletScreen extends Screen {
         if (view != View.HOME) return -1;
         double px = panelX(mx);
         double py = panelY(my);
-        if (py < cellY || py >= cellY + cellH) return -1;
         for (int i = 0; i < APP_ICONS.length; i++) {
-            int x = cellX + i * (cellW + APP_GAP);
-            if (px >= x && px < x + cellW) return i;
+            int x = appCellX(i);
+            int y = appCellY(i);
+            if (px >= x && px < x + cellW && py >= y && py < y + cellH) return i;
         }
         return -1;
     }
@@ -678,7 +698,7 @@ public class TabletScreen extends Screen {
                 chatScroll = 0;
                 return true;
             }
-            if (app == APP_CAMERA || app == APP_GALLERY) {
+            if (app >= 0) {
                 return true; // ainda sem funcao
             }
         }

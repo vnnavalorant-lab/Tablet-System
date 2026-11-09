@@ -18,7 +18,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
   - quadrado: fechar o app (desliga o Minecraft interno)
 
 ## ScuteAI (app de chat)
-- Quarto icone da tela inicial (um balao de conversa; a skin da ScuteAI aparece so dentro do chat). Abre um chat: suas mensagens ficam a **direita** com o seu rosto (skin do dono do tablet) e as respostas da **ScuteAI** a esquerda com o rosto da skin dela (`textures/gui/scute_skin.png`).
+- Quarto icone da tela inicial (o logo da ScuteAI; a skin da ScuteAI aparece so dentro do chat). Abre um chat: suas mensagens ficam a **direita** com o seu rosto (skin do dono do tablet) e as respostas da **ScuteAI** a esquerda com o rosto da skin dela (`textures/gui/scute_skin.png`).
 - Digite e aperte **Enter**. Roda do mouse / PageUp / PageDown rolam o historico. **Esc** ou o triangulo voltam ao inicio. Ctrl+V cola.
 - E uma IA simples: procura palavras-chave e devolve respostas prontas (saudacoes, contas como `2+2`, hora, data, piadas, dicas de Minecraft...). Para adicionar respostas, edite a lista `RULES` em `client/ScuteAi.java`.
 - Para trocar o rosto da ScuteAI, substitua `scute_skin.png` (skin 64x64) (rosto no chat) e, se quiser, `scute_ai_icon.png` (icone 20x20 da tela inicial).
@@ -41,3 +41,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
 - Launchers que nao usam a classpath padrao do Fabric (alguns como Prism/MultiMC) podem exigir ajustes.
 - Ctrl+C/V e outros atalhos que consultam o estado do teclado direto no GLFW nao funcionam no jogo interno.
 - O jogo interno e offline: so singleplayer.
+
+
+## Apps extras da tela inicial
+Relogio, Crafting, Notas, Livros, Raio, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao). A tela inicial e uma grade que quebra linha conforme a largura.
