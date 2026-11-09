@@ -11,8 +11,9 @@ import java.nio.file.Path;
 
 /** Configuracao em config/tablet_inception.json (criada automaticamente). */
 public final class TabletConfig {
-    public int width = 800;
-    public int height = 570;
+    /** 0 = automatico (acompanha a proporcao da tela do tablet). */
+    public int width = 0;
+    public int height = 480;
     public int memoryMb = 2048;
     public int fps = 30;
     public String username = "Inner";
@@ -38,7 +39,7 @@ public final class TabletConfig {
         } catch (IOException | RuntimeException e) {
             TabletInceptionMod.LOGGER.warn("Nao foi possivel ler {}: {}", file, e.toString());
         }
-        cfg.width = Math.max(320, Math.min(1920, cfg.width));
+        cfg.width = cfg.width <= 0 ? 0 : Math.max(320, Math.min(1920, cfg.width));
         cfg.height = Math.max(240, Math.min(1080, cfg.height));
         cfg.memoryMb = Math.max(512, cfg.memoryMb);
         cfg.fps = Math.max(5, Math.min(120, cfg.fps));

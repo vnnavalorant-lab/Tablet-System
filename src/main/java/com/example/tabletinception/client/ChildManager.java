@@ -52,12 +52,12 @@ public final class ChildManager {
         return FabricLoader.getInstance().getGameDir().resolve("tablet_inception").resolve("child.log");
     }
 
-    public static synchronized void start() {
+    public static synchronized void start(int width, int height) {
         Status st = status();
         if (st == Status.STARTING || st == Status.RUNNING) return;
         lastError = "";
         try {
-            doStart();
+            doStart(width, height);
         } catch (Exception e) {
             lastError = e.getClass().getSimpleName() + ": " + e.getMessage();
             TabletInceptionMod.LOGGER.error("Falha ao iniciar o Minecraft interno", e);
@@ -82,7 +82,7 @@ public final class ChildManager {
         t.start();
     }
 
-    private static void doStart() throws IOException {
+    private static void doStart(int width, int height) throws IOException {
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             throw new IOException("Ambiente de desenvolvimento nao suportado: compile o .jar e teste em um launcher.");
         }
@@ -134,7 +134,7 @@ public final class ChildManager {
         cmd.add("-cp");
         cmd.add(System.getProperty("java.class.path"));
         cmd.add(mainClass());
-        cmd.addAll(gameArgs(cfg, instance));
+        cmd.addAll(gameArgs(cfg, instance, width, height));
 
         ProcessBuilder pb = new ProcessBuilder(cmd)
                 .directory(instance.toFile())
@@ -193,7 +193,7 @@ public final class ChildManager {
         return out;
     }
 
-    private static List<String> gameArgs(TabletConfig cfg, Path instance) {
+    private static List<String> gameArgs(TabletConfig cfg, Path instance, int width, int height) {
         String[] raw = FabricLoader.getInstance().getLaunchArguments(false);
         Set<String> dropKeys = Set.of("--xuid", "--clientId", "--server", "--port",
                 "--quickPlayPath", "--quickPlaySingleplayer", "--quickPlayMultiplayer", "--quickPlayRealms");
@@ -219,8 +219,8 @@ public final class ChildManager {
         kv.put("--uuid", uuid);
         kv.put("--accessToken", "0");
         kv.put("--userType", "legacy");
-        kv.put("--width", String.valueOf(cfg.width));
-        kv.put("--height", String.valueOf(cfg.height));
+        kv.put("--width", String.valueOf(width));
+        kv.put("--height", String.valueOf(height));
 
         List<String> out = new ArrayList<>();
         for (Map.Entry<String, String> e : kv.entrySet()) {

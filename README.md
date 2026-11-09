@@ -9,7 +9,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
 
 ## Usar
 - Receita: ferro (borda), vidro fino (centro), redstone (embaixo), ou `/give @s tablet_inception:tablet`.
-- Clique direito com o tablet: abre a tela inicial, com o icone do **Minecraft**.
+- Clique direito com o tablet: abre a tela inicial (o tablet ocupa quase toda a janela; o jogo preenche toda a tela, por baixo da moldura translucida), com o icone do **Minecraft**.
 - Toque no icone: abre o Minecraft interno (liga o jogo; a primeira vez demora).
 - No app: **clique na tela** para capturar mouse e teclado, **Ctrl direito** solta. Com tudo solto, **Esc** fecha o tablet.
 - Botoes da coluna direita do tablet:
@@ -26,7 +26,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
   um anel de eventos no mesmo arquivo.
 
 ## Configuracao (`config/tablet_inception.json`)
-`width`, `height` (resolucao do jogo interno; padrao 800x570, mesma proporcao da tela do tablet), `memoryMb`, `fps` (captura), `username`,
+`width` (0 = automatico: acompanha a proporcao da tela do tablet), `height` (altura do jogo interno, padrao 480), `memoryMb`, `fps` (captura), `username`,
 `javaPath`, `extraJvmArgs`.
 
 ## Problemas
