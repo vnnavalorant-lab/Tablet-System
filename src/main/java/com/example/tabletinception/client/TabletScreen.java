@@ -1,11 +1,12 @@
 package com.example.tabletinception.client;
 
+import com.example.tabletinception.TabletInceptionMod;
 import com.example.tabletinception.channel.Channel;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.util.Window;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -13,20 +14,62 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 
 import java.nio.ByteBuffer;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Tela do tablet: mostra o Minecraft interno e envia teclado/mouse para ele.
+ * Tablet: tela inicial com o icone do Minecraft. Ao tocar no icone, abre o Minecraft interno.
  *
- *  - Clique na tela do tablet: captura a entrada.
- *  - Ctrl direito: solta a entrada. Com a entrada solta, Esc fecha o tablet.
+ * Botoes de navegacao (coluna da direita):
+ *   triangulo = voltar (no app volta para a tela inicial; na tela inicial fecha o tablet)
+ *   circulo   = tela inicial (o Minecraft continua rodando em segundo plano)
+ *   quadrado  = fechar o app (desliga o Minecraft interno)
+ *
+ * No app: clique na tela para capturar mouse/teclado, Ctrl direito solta, Esc (solto) fecha o tablet.
  */
 public class TabletScreen extends Screen {
-    private static final int BEZEL = 6;
-    private static final int TOP = 22;
-    private static final int BOTTOM = 56;
+    private static final Identifier PANEL = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/tablet_panel.png");
+    private static final Identifier ICON = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/minecraft_icon.png");
+    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
+
+    // Medidas da imagem do painel (em pixels da textura)
+    private static final int PANEL_W = 232;
+    private static final int PANEL_H = 170;
+    private static final int SCREEN_X = 10;       // area da tela
+    private static final int SCREEN_Y = 9;
+    private static final int STATUS_H = 9;        // barra de status
+    private static final int HOME_Y = 18;         // inicio da area de apps
+    private static final int HOME_W = 198;        // largura da area de apps (sem a coluna de navegacao)
+    private static final int HOME_H = 141;
+    private static final int NAV_X = 208;         // coluna de navegacao
+    private static final int NAV_W = 14;
+    private static final int ICON_SIZE = 20;
+
+    private enum View { HOME, APP }
+
+    private View view = View.HOME;
+
+    // layout (em pixels da GUI)
+    private int s = 1;
+    private int ox;
+    private int oy;
+    private int ax;
+    private int ay;
+    private int aw;
+    private int ah;
+    // retangulo onde o frame do jogo e desenhado
+    private int dx;
+    private int dy;
+    private int dw;
+    private int dh;
+    // celula do icone na tela inicial
+    private int cellX;
+    private int cellY;
+    private int cellW;
+    private int cellH;
 
     private NativeImageBackedTexture texture;
     private Identifier textureId;
@@ -43,38 +86,8 @@ public class TabletScreen extends Screen {
     private final Set<Integer> pressedKeys = new HashSet<>();
     private final Set<Integer> pressedButtons = new HashSet<>();
 
-    private ButtonWidget powerButton;
-    private boolean autoStarted;
-
-    private int dx;
-    private int dy;
-    private int dw;
-    private int dh;
-
     public TabletScreen() {
         super(Text.literal("Tablet"));
-    }
-
-    @Override
-    protected void init() {
-        powerButton = this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Ligar"), b -> onPower())
-                        .dimensions(this.width / 2 - 60, this.height - 28, 120, 20)
-                        .build());
-        if (!autoStarted && ChildManager.status() == ChildManager.Status.OFF) {
-            autoStarted = true;
-            ChildManager.start();
-        }
-    }
-
-    private void onPower() {
-        switch (ChildManager.status()) {
-            case OFF, DEAD -> ChildManager.start();
-            case STARTING, RUNNING -> {
-                uncapture();
-                ChildManager.stop();
-            }
-        }
     }
 
     @Override
@@ -87,26 +100,57 @@ public class TabletScreen extends Screen {
         return false;
     }
 
-    // ------------------------------------------------------------------ render
+    // ------------------------------------------------------------------ layout
 
-    private void computeLayout() {
-        double aspect = texW > 0 ? texW / (double) texH : 16.0 / 9.0;
-        int availW = this.width - 40;
-        int availH = this.height - TOP - BOTTOM;
-        if (availW / aspect > availH) {
-            dh = Math.max(1, availH);
-            dw = Math.max(1, (int) (dh * aspect));
+    private void computeLayout(ChildManager.Status st) {
+        s = Math.max(1, Math.min((this.width - 16) / PANEL_W, (this.height - 30) / PANEL_H));
+        ox = (this.width - PANEL_W * s) / 2;
+        oy = (this.height - PANEL_H * s) / 2;
+        ax = ox + SCREEN_X * s;
+        ay = oy + HOME_Y * s;
+        aw = HOME_W * s;
+        ah = HOME_H * s;
+
+        if (view == View.APP && st == ChildManager.Status.RUNNING && texW > 0) {
+            double aspect = texW / (double) texH;
+            if (aw / aspect > ah) {
+                dh = ah;
+                dw = Math.max(1, (int) (dh * aspect));
+            } else {
+                dw = aw;
+                dh = Math.max(1, (int) (dw / aspect));
+            }
+            dx = ax + (aw - dw) / 2;
+            dy = ay + (ah - dh) / 2;
         } else {
-            dw = Math.max(1, availW);
-            dh = Math.max(1, (int) (dw / aspect));
+            dx = ax;
+            dy = ay;
+            dw = aw;
+            dh = ah;
         }
-        dx = (this.width - dw) / 2;
-        dy = TOP + (availH - dh) / 2;
+
+        int labelScale = labelScale();
+        int labelW = this.textRenderer.getWidth("Minecraft") * labelScale;
+        int iconPx = ICON_SIZE * s;
+        cellW = Math.max(iconPx + 8 * s, labelW + 6 * s);
+        cellH = iconPx + 3 * s + 8 * labelScale + 4 * s;
+        cellX = ax + 8 * s;
+        cellY = ay + 8 * s;
     }
+
+    private int labelScale() {
+        return Math.max(1, Math.round(s * 0.6f));
+    }
+
+    private int statusTextScale() {
+        return Math.max(1, Math.min(Math.round(s * 0.75f), (STATUS_H * s) / 8));
+    }
+
+    // ------------------------------------------------------------------ frames
 
     private void pollFrame(ChildManager.Status st) {
         Channel ch = ChildManager.channel();
-        if (st != ChildManager.Status.RUNNING || ch == null) {
+        if (view != View.APP || st != ChildManager.Status.RUNNING || ch == null) {
             lastSeq = 0;
             return;
         }
@@ -143,60 +187,123 @@ public class TabletScreen extends Screen {
         }
     }
 
+    // ------------------------------------------------------------------ render
+
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         this.renderBackground(ctx);
 
         ChildManager.Status st = ChildManager.status();
+        computeLayout(st);
         pollFrame(st);
-        computeLayout();
-
-        ctx.fill(dx - BEZEL, dy - BEZEL, dx + dw + BEZEL, dy + dh + BEZEL, 0xFF1B1B1F);
-
-        if (st == ChildManager.Status.RUNNING && texture != null) {
-            ctx.drawTexture(textureId, dx, dy, dw, dh, 0f, 0f, texW, texH, texW, texH);
-        } else {
-            ctx.fill(dx, dy, dx + dw, dy + dh, 0xFF000000);
-            drawPlaceholder(ctx, st);
+        if (view == View.APP) {
+            computeLayout(st); // o tamanho do frame pode ter mudado
         }
 
-        ctx.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 6, 0xFFFFFF);
+        // Moldura + fundo do tablet
+        ctx.drawTexture(PANEL, ox, oy, PANEL_W * s, PANEL_H * s, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
 
-        String hint = captured
-                ? "Ctrl direito: soltar o mouse e o teclado"
-                : (st == ChildManager.Status.RUNNING
-                        ? "Clique na tela para controlar  |  Esc: fechar o tablet"
-                        : "Esc: fechar o tablet");
-        ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, dy + dh + BEZEL + 6, 0xA0A0A0);
+        drawStatusBar(ctx);
 
-        powerButton.setMessage(Text.literal(
-                st == ChildManager.Status.STARTING || st == ChildManager.Status.RUNNING ? "Desligar" : "Ligar"));
+        if (view == View.HOME) {
+            drawHome(ctx, st, mouseX, mouseY);
+        } else {
+            drawApp(ctx, st);
+        }
+
+        // Dica abaixo do tablet
+        int hintY = oy + PANEL_H * s + 6;
+        if (hintY + 9 <= this.height) {
+            String hint = view == View.APP
+                    ? (captured ? "Ctrl direito: soltar mouse e teclado"
+                                : "Clique na tela para controlar  |  Esc: fechar o tablet")
+                    : "Toque no icone para abrir  |  Esc: fechar o tablet";
+            ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, hintY, 0xA0A0A0);
+        }
 
         super.render(ctx, mouseX, mouseY, delta);
         updateCursorMode(st);
     }
 
+    private void drawScaledText(DrawContext ctx, String text, int x, int y, int scale, int color) {
+        MatrixStack m = ctx.getMatrices();
+        m.push();
+        m.translate(x, y, 0);
+        m.scale(scale, scale, 1f);
+        ctx.drawTextWithShadow(this.textRenderer, Text.literal(text), 0, 0, color);
+        m.pop();
+    }
+
+    private void drawStatusBar(DrawContext ctx) {
+        int ts = statusTextScale();
+        int y = oy + SCREEN_Y * s + (STATUS_H * s - 8 * ts) / 2 + ts / 2;
+        drawScaledText(ctx, LocalTime.now().format(CLOCK), ox + (SCREEN_X + 4) * s, y, ts, 0xFFFFFFFF);
+    }
+
+    private void drawHome(DrawContext ctx, ChildManager.Status st, int mouseX, int mouseY) {
+        boolean hover = inIconCell(mouseX, mouseY);
+        if (hover) {
+            ctx.fill(cellX, cellY, cellX + cellW, cellY + cellH, 0x33FFFFFF);
+        }
+
+        int iconPx = ICON_SIZE * s;
+        int iconX = cellX + (cellW - iconPx) / 2;
+        ctx.drawTexture(ICON, iconX, cellY + 2 * s, iconPx, iconPx, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+        int ls = labelScale();
+        int labelW = this.textRenderer.getWidth("Minecraft") * ls;
+        int labelX = cellX + (cellW - labelW) / 2;
+        int labelY = cellY + 2 * s + iconPx + 2 * s;
+        drawScaledText(ctx, "Minecraft", labelX, labelY, ls, 0xFFFFFFFF);
+
+        // Pontinho "app em execucao"
+        if (st == ChildManager.Status.STARTING || st == ChildManager.Status.RUNNING) {
+            int dot = Math.max(2, s);
+            int cx = cellX + cellW / 2 - dot / 2;
+            int cy = cellY + cellH - dot - Math.max(1, s / 2);
+            ctx.fill(cx, cy, cx + dot, cy + dot, 0xFFFFFFFF);
+        }
+    }
+
+    private void drawApp(DrawContext ctx, ChildManager.Status st) {
+        // fundo do app
+        ctx.fill(ax, ay, ax + aw, ay + ah, 0xFF000000);
+        if (st == ChildManager.Status.RUNNING && texture != null) {
+            ctx.drawTexture(textureId, dx, dy, dw, dh, 0f, 0f, texW, texH, texW, texH);
+        } else {
+            drawPlaceholder(ctx, st);
+        }
+    }
+
     private void drawPlaceholder(DrawContext ctx, ChildManager.Status st) {
-        int cx = dx + dw / 2;
-        int cy = dy + dh / 2;
+        int cx = ax + aw / 2;
+        int cy = ay + ah / 2;
         switch (st) {
-            case OFF -> ctx.drawCenteredTextWithShadow(this.textRenderer,
-                    Text.literal("Minecraft interno desligado"), cx, cy - 4, 0xFFFFFF);
+            case OFF -> {
+                ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal("Minecraft desligado"), cx, cy - 10, 0xFFFFFF);
+                ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal("Clique para iniciar"), cx, cy + 4, 0xA0A0A0);
+            }
             case STARTING -> {
                 int dots = (int) ((System.currentTimeMillis() / 400) % 4);
                 ctx.drawCenteredTextWithShadow(this.textRenderer,
-                        Text.literal("Iniciando o Minecraft interno" + ".".repeat(dots)), cx, cy - 12, 0xFFFFFF);
+                        Text.literal("Iniciando o Minecraft" + ".".repeat(dots)), cx, cy - 10, 0xFFFFFF);
                 ctx.drawCenteredTextWithShadow(this.textRenderer,
-                        Text.literal("Isso pode levar um minuto na primeira vez."), cx, cy + 2, 0xA0A0A0);
+                        Text.literal("Pode levar um minuto na primeira vez."), cx, cy + 4, 0xA0A0A0);
             }
-            case DEAD -> ctx.drawCenteredTextWithShadow(this.textRenderer,
-                    Text.literal("O Minecraft interno encerrou. Veja tablet_inception/child.log"), cx, cy - 4, 0xFF8080);
+            case DEAD -> {
+                ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal("O Minecraft encerrou (veja tablet_inception/child.log)"), cx, cy - 10, 0xFF8080);
+                ctx.drawCenteredTextWithShadow(this.textRenderer,
+                        Text.literal("Clique para tentar novamente"), cx, cy + 4, 0xA0A0A0);
+            }
             default -> { }
         }
         String err = ChildManager.lastError();
         if (!err.isEmpty()) {
-            List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal(err), Math.max(40, dw - 20));
-            int y = cy + 16;
+            List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal(err), Math.max(40, aw - 20));
+            int y = cy + 22;
             for (OrderedText line : lines) {
                 ctx.drawCenteredTextWithShadow(this.textRenderer, line, cx, y, 0xFF8080);
                 y += 10;
@@ -206,12 +313,66 @@ public class TabletScreen extends Screen {
 
     private void updateCursorMode(ChildManager.Status st) {
         Channel ch = ChildManager.channel();
-        boolean want = captured && st == ChildManager.Status.RUNNING && ch != null && ch.cursorLocked();
+        boolean want = view == View.APP && captured && st == ChildManager.Status.RUNNING
+                && ch != null && ch.cursorLocked();
         if (want != cursorDisabled) {
             cursorDisabled = want;
             lastValid = false;
             GLFW.glfwSetInputMode(this.client.getWindow().getHandle(), GLFW.GLFW_CURSOR,
                     want ? GLFW.GLFW_CURSOR_DISABLED : GLFW.GLFW_CURSOR_NORMAL);
+        }
+    }
+
+    // ------------------------------------------------------------------ navegacao
+
+    private boolean inIconCell(double mx, double my) {
+        return view == View.HOME && mx >= cellX && mx < cellX + cellW && my >= cellY && my < cellY + cellH;
+    }
+
+    private boolean insideApp(double mx, double my) {
+        return mx >= ax && mx < ax + aw && my >= ay && my < ay + ah;
+    }
+
+    /** 0 = voltar, 1 = inicio, 2 = fechar app, -1 = fora da coluna de navegacao. */
+    private int navAt(double mx, double my) {
+        double px = (mx - ox) / s;
+        double py = (my - oy) / s;
+        if (px < NAV_X || px >= NAV_X + NAV_W || py < HOME_Y || py >= HOME_Y + HOME_H) return -1;
+        if (py < 68) return 0;
+        if (py < 108) return 1;
+        return 2;
+    }
+
+    private void onNav(int nav) {
+        switch (nav) {
+            case 0 -> {
+                if (view == View.APP) goHome();
+                else this.close();
+            }
+            case 1 -> goHome();
+            case 2 -> {
+                uncapture();
+                ChildManager.Status st = ChildManager.status();
+                if (st == ChildManager.Status.STARTING || st == ChildManager.Status.RUNNING) {
+                    ChildManager.stop();
+                }
+                view = View.HOME;
+            }
+            default -> { }
+        }
+    }
+
+    private void goHome() {
+        uncapture();
+        view = View.HOME;
+    }
+
+    private void openApp() {
+        view = View.APP;
+        lastSeq = 0;
+        ChildManager.Status st = ChildManager.status();
+        if (st == ChildManager.Status.OFF || st == ChildManager.Status.DEAD) {
+            ChildManager.start();
         }
     }
 
@@ -221,14 +382,14 @@ public class TabletScreen extends Screen {
         return ChildManager.status() == ChildManager.Status.RUNNING && ChildManager.channel() != null;
     }
 
-    private boolean inside(double mx, double my) {
-        return mx >= dx && mx < dx + dw && my >= dy && my < dy + dh;
+    private boolean forwarding() {
+        return view == View.APP && captured && running();
     }
 
     private void sendAbsolute(double mx, double my) {
         Channel ch = ChildManager.channel();
-        int ww = ch.windowWidth() > 0 ? ch.windowWidth() : 854;
-        int wh = ch.windowHeight() > 0 ? ch.windowHeight() : 480;
+        int ww = ch.windowWidth() > 0 ? ch.windowWidth() : 800;
+        int wh = ch.windowHeight() > 0 ? ch.windowHeight() : 570;
         double x = Math.max(0, Math.min(ww - 1, (mx - dx) / dw * ww));
         double y = Math.max(0, Math.min(wh - 1, (my - dy) / dh * wh));
         ch.sendInput(Channel.IN_MOUSE_POS, 0, 0, 0, 0, x, y);
@@ -236,7 +397,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public void mouseMoved(double mx, double my) {
-        if (!captured || !running()) {
+        if (!forwarding()) {
             lastValid = false;
             return;
         }
@@ -258,13 +419,30 @@ public class TabletScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (running()) {
-            if (captured && cursorDisabled) {
-                ChildManager.channel().sendInput(Channel.IN_MOUSE_BUTTON, button, 1, 0, 0, 0, 0);
-                pressedButtons.add(button);
+        // Cursor preso dentro do jogo: tudo vai para o jogo.
+        if (forwarding() && cursorDisabled) {
+            ChildManager.channel().sendInput(Channel.IN_MOUSE_BUTTON, button, 1, 0, 0, 0, 0);
+            pressedButtons.add(button);
+            return true;
+        }
+        if (button == 0) {
+            int nav = navAt(mx, my);
+            if (nav >= 0) {
+                onNav(nav);
                 return true;
             }
-            if (inside(mx, my)) {
+            if (inIconCell(mx, my)) {
+                openApp();
+                return true;
+            }
+        }
+        if (view == View.APP && insideApp(mx, my)) {
+            ChildManager.Status st = ChildManager.status();
+            if (st == ChildManager.Status.OFF || st == ChildManager.Status.DEAD) {
+                ChildManager.start();
+                return true;
+            }
+            if (running()) {
                 captured = true;
                 sendAbsolute(mx, my);
                 ChildManager.channel().sendInput(Channel.IN_MOUSE_BUTTON, button, 1, 0, 0, 0, 0);
@@ -286,12 +464,12 @@ public class TabletScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dX, double dY) {
-        return captured || super.mouseDragged(mx, my, button, dX, dY);
+        return forwarding() || super.mouseDragged(mx, my, button, dX, dY);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double amount) {
-        if (captured && running()) {
+        if (forwarding()) {
             ChildManager.channel().sendInput(Channel.IN_MOUSE_SCROLL, 0, 0, 0, 0, 0, amount);
             return true;
         }
@@ -300,7 +478,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (captured && running()) {
+        if (forwarding()) {
             if (keyCode == GLFW.GLFW_KEY_RIGHT_CONTROL) {
                 uncapture();
                 return true;
@@ -327,7 +505,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
-        if (captured && running()) {
+        if (forwarding()) {
             ChildManager.channel().sendInput(Channel.IN_CHAR, chr, modifiers, 0, 0, 0, 0);
             return true;
         }

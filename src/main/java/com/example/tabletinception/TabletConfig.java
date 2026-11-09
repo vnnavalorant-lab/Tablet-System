@@ -11,8 +11,8 @@ import java.nio.file.Path;
 
 /** Configuracao em config/tablet_inception.json (criada automaticamente). */
 public final class TabletConfig {
-    public int width = 854;
-    public int height = 480;
+    public int width = 800;
+    public int height = 570;
     public int memoryMb = 2048;
     public int fps = 30;
     public String username = "Inner";
