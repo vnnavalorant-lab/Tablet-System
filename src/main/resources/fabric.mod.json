@@ -1,19 +1,18 @@
 {
   "schemaVersion": 1,
-  "id": "minecraftinside",
+  "id": "tablet_inception",
   "version": "${version}",
-  "name": "Minecraft Inside Minecraft",
-  "description": "Um tablet que roda uma versao simplificada e jogavel de Minecraft dentro do jogo, sem segunda instancia.",
-  "authors": [],
+  "name": "Tablet Inception",
+  "description": "Um tablet que acessa um Minecraft dentro do Minecraft. Inspirado no Project Inception.",
+  "authors": ["Voce"],
   "license": "MIT",
   "environment": "*",
-  "mixins": ["minecraftinside.mixins.json"],
   "entrypoints": {
-    "main": ["dev.mcinside.MinecraftInside"],
-    "client": ["dev.mcinside.client.MinecraftInsideClient"]
+    "main": ["com.example.tabletinception.TabletInceptionMod"],
+    "client": ["com.example.tabletinception.client.TabletInceptionClient"]
   },
   "depends": {
-    "fabricloader": ">=0.14.21",
+    "fabricloader": ">=0.15.0",
     "minecraft": "~1.20.1",
     "java": ">=17",
     "fabric-api": "*"

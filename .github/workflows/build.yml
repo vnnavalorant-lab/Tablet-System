@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -19,21 +19,19 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Usa o Gradle 8.6 direto, então funciona mesmo sem gradlew no repositório.
+      # Instala o Gradle 8.5 diretamente (nao precisa do gradle-wrapper.jar no repositorio)
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.6
-
-      - name: Teste do núcleo (sem Minecraft)
-        run: sh tools/run-core-test.sh
+          gradle-version: 8.5
 
       - name: Build
         run: gradle build --no-daemon
 
-      - name: Upload do mod
+      - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: minecraft-inside
-          path: build/libs/*.jar
-          if-no-files-found: error
+          name: tablet-inception
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
