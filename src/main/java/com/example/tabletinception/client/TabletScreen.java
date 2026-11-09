@@ -34,7 +34,9 @@ import java.util.Set;
  *  - tablet_panel.png : painel completo (tela inicial).
  *  - tablet_border.png: moldura + barra de status/navegacao translucidas, desenhada POR CIMA do jogo.
  *
- * Apps: Minecraft (jogo interno), Camera, Galeria (ainda sem funcao) e ScuteAI (chat simples com respostas prontas).
+ * Apps: Minecraft (jogo interno), ScuteAI (chat simples com respostas prontas), Ajustes (papel de parede e cores),
+ * Clima (le o clima real do jogo), Notas (bloco de notas salvo em arquivo), Relogio (so a hora atual) e
+ * Musica (lista de musicas do Minecraft). Camera, Galeria, Livros e App Store mostram "Aplicativo em Desenvolvimento".
  *
  * Navegacao (coluna da direita):  triangulo = voltar | circulo = inicio | quadrado = fechar o app.
  * No app: clique na tela captura mouse/teclado, Ctrl direito solta, Esc (solto) fecha o tablet.
@@ -52,6 +54,8 @@ public class TabletScreen extends Screen {
     private static final Identifier ICON_BOOKS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/books_icon.png");
     private static final Identifier ICON_SETTINGS = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/settings_icon.png");
     private static final Identifier ICON_WEATHER = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/weather_icon.png");
+    private static final Identifier ICON_MUSIC = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/music_icon.png");
+    private static final Identifier ICON_STORE = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/app_store_icon.png");
     private static final Identifier SCUTE_SKIN = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_skin.png");
 
     // Apps da tela inicial (na ordem em que aparecem, da esquerda para a direita)
@@ -59,13 +63,22 @@ public class TabletScreen extends Screen {
     private static final int APP_CAMERA = 1;
     private static final int APP_GALLERY = 2;
     private static final int APP_SCUTE = 3;
+    private static final int APP_CLOCK = 4;
+    private static final int APP_NOTES = 6;
+    private static final int APP_BOOKS = 7;
+    private static final int APP_MUSIC = 10;
+    private static final int APP_STORE = 11;
     private static final int APP_SETTINGS = 8;   // posicao de "Ajustes" em APP_ICONS/APP_NAMES
+    private static final int APP_WEATHER = 9;    // posicao de "Clima" em APP_ICONS/APP_NAMES
     private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE,
-            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER};
+            ICON_CLOCK, ICON_CRAFTING, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER,
+            ICON_MUSIC, ICON_STORE};
     private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI",
-            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Ajustes", "Clima"};
+            "Rel\u00f3gio", "Crafting", "Notas", "Livros", "Ajustes", "Clima",
+            "M\u00fasica", "App Store"};
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
+    private static final DateTimeFormatter CLOCK_BIG = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     // Medidas das texturas (pixels do painel)
     private static final int PANEL_W = 284;
@@ -95,13 +108,25 @@ public class TabletScreen extends Screen {
     private static final int BUBBLE_MAX_W = 140;
     private static final int COLOR_BG = 0xFF0A1250;
     private static final int COLOR_LINE = 0xFF4A5590;
+    // Notas / Musica (pixels do painel)
+    private static final int NOTES_X1 = CHAT_X1;
+    private static final int NOTES_X2 = CHAT_X2;
+    private static final int NOTES_Y1 = CHAT_TOP + 3;
+    private static final int NOTES_Y2 = SCREEN_Y + SCREEN_H - 4;
+    private static final int MUS_TOP = CHAT_TOP + 2;
+    private static final int MUS_BOTTOM = CHAT_BOTTOM;
+    private static final int MUS_ROW_H = 10;
+    private static final int MUS_STOP_W = 40;
+    private static final int MUS_STOP_H = 10;
+    private static final int MUS_STOP_X = CHAT_X2 - MUS_STOP_W;
+    private static final int MUS_STOP_Y = CHAT_BOTTOM + 2;
     // Margens da janela (fracao) e espaco da dica de texto
     private static final double MARGIN_X = 0.04;
     private static final double MARGIN_TOP = 0.045;
     private static final double MARGIN_BOTTOM = 0.06;
     private static final int HINT_H = 14;
 
-    private enum View { HOME, APP, SCUTE, SETTINGS }
+    private enum View { HOME, APP, SCUTE, SETTINGS, WEATHER, NOTES, CLOCK, MUSIC, DEV }
 
     private View view = View.HOME;
 
@@ -129,6 +154,10 @@ public class TabletScreen extends Screen {
     private final int[] meta = new int[3];
 
     private double chatScroll;     // pixels do painel acima do fim da conversa
+    private int weatherScroll;     // linhas de comentario do Clima roladas
+    private int notesScroll;       // linhas das Notas roladas para cima (0 = fim do texto)
+    private int musicScroll;       // primeira musica visivel na lista
+    private String devTitle = "";  // nome do app "em desenvolvimento" aberto
 
     // Ajustes (pixels do painel)
     private static final int PREV_X = CHAT_X1 + 4;
@@ -299,6 +328,8 @@ public class TabletScreen extends Screen {
         Wallpaper.ensureLoaded();
         Theme.ensureLoaded();
         applyPendingWallpaper();
+        Notes.ensureLoaded();
+        Notes.tick();
 
         ChildManager.Status st = ChildManager.status();
         computeLayout(st);
@@ -326,6 +357,16 @@ public class TabletScreen extends Screen {
             drawScute(ctx);
         } else if (view == View.SETTINGS) {
             drawSettings(ctx, panelX(mouseX), panelY(mouseY));
+        } else if (view == View.WEATHER) {
+            drawWeather(ctx);
+        } else if (view == View.NOTES) {
+            drawNotes(ctx);
+        } else if (view == View.CLOCK) {
+            drawClock(ctx);
+        } else if (view == View.MUSIC) {
+            drawMusic(ctx, panelX(mouseX), panelY(mouseY));
+        } else if (view == View.DEV) {
+            drawDev(ctx);
         } else {
             drawApp(ctx, st);
         }
@@ -343,6 +384,14 @@ public class TabletScreen extends Screen {
                     ? "Digite e aperte Enter  |  Roda do mouse: rolar  |  Esc: voltar"
                     : view == View.SETTINGS
                     ? "Escolha as opcoes com o mouse  |  Esc: voltar"
+                    : view == View.WEATHER
+                    ? "Roda do mouse: rolar os comentarios  |  Esc: voltar"
+                    : view == View.NOTES
+                    ? "Digite para anotar (salva sozinho)  |  Ctrl+V: colar  |  Esc: voltar"
+                    : view == View.MUSIC
+                    ? "Clique em uma musica para tocar  |  Roda do mouse: rolar  |  Esc: voltar"
+                    : view == View.CLOCK || view == View.DEV
+                    ? "Esc: voltar"
                     : "Toque em um app para abrir  |  Esc: fechar o tablet";
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, hintY, 0xA0A0A0);
         }
@@ -370,6 +419,14 @@ public class TabletScreen extends Screen {
         double y = SCREEN_Y + (STATUS_H - 8 * k) / 2.0 + k / 2.0;
         drawText(ctx, Text.literal(LocalTime.now().format(CLOCK)).asOrderedText(),
                 SCREEN_X + 4, y, k, 0xFFFFFFFF);
+        // clima atual do jogo (no centro da barra), colorido pela nota: verde = bom, vermelho = ruim
+        if (view != View.APP && view != View.WEATHER && this.client.world != null) {
+            WeatherInfo w = WeatherInfo.current(this.client);
+            if (!w.shortLabel.isEmpty()) {
+                drawTextCentered(ctx, Text.literal(w.shortLabel).asOrderedText(),
+                        SCREEN_X + SCREEN_W / 2.0, y, k, w.rating.color);
+            }
+        }
     }
 
     private void drawHome(DrawContext ctx, ChildManager.Status st, double pmx, double pmy) {
@@ -384,6 +441,14 @@ public class TabletScreen extends Screen {
 
             int iconX = x + (cellW - ICON_SIZE) / 2;
             ctx.drawTexture(APP_ICONS[i], iconX, cellY + 2, ICON_SIZE, ICON_SIZE, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+            // O icone do Clima mostra a nota do tempo agora (verde = bom, amarelo = regular, vermelho = ruim)
+            if (i == APP_WEATHER && this.client.world != null) {
+                int dotX = iconX + ICON_SIZE - 5;
+                int dotY = cellY + 1;
+                ctx.fill(dotX - 1, dotY - 1, dotX + 5, dotY + 5, 0xFF0A1250);
+                ctx.fill(dotX, dotY, dotX + 4, dotY + 4, WeatherInfo.current(this.client).rating.color);
+            }
 
             drawTextCentered(ctx, Text.literal(APP_NAMES[i]).asOrderedText(),
                     x + cellW / 2.0, cellY + 2 + ICON_SIZE + 2, kl, 0xFFFFFFFF);
@@ -779,6 +844,246 @@ public class TabletScreen extends Screen {
         chatScroll = 0;
     }
 
+    // ------------------------------------------------------------------ Clima
+
+    private void drawWeather(DrawContext ctx) {
+        final double k = chatK();
+        final double lh = 9 * k;
+        final WeatherInfo w = WeatherInfo.current(this.client);
+
+        ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+
+        // cabecalho
+        double hk = k * 1.15;
+        drawTextCentered(ctx, Text.literal("Clima").asOrderedText(),
+                (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
+        ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
+
+        // cena animada (o ceu, o sol/lua, as nuvens e a chuva acompanham o jogo)
+        final int sx = CHAT_X1;
+        final int sy = CHAT_TOP + 4;
+        final int sw = 100;
+        final int sh = 60;
+        ctx.fill(sx - 1, sy - 1, sx + sw + 1, sy + sh + 1, COLOR_LINE);
+        WeatherArt.draw(ctx, sx, sy, sw, sh, w);
+
+        // coluna da direita: titulo, nota (bom/ruim) e dados
+        final int rx = sx + sw + 8;
+        final int rw = CHAT_X2 - rx;
+        double tk = k * 1.5;
+        while (tk > k && this.textRenderer.getWidth(w.title) * tk > rw) tk -= 0.05;
+        drawText(ctx, Text.literal(w.title).asOrderedText(), rx, sy, tk, 0xFFFFFFFF);
+
+        int badgeY = (int) Math.round(sy + 8 * tk + 5);
+        int badgeW = (int) Math.ceil(this.textRenderer.getWidth(w.rating.label) * k) + 10;
+        int badgeH = (int) Math.ceil(8 * k) + 5;
+        int dark = 0xFF000000 | (((w.rating.color >> 16 & 0xFF) / 4) << 16)
+                | (((w.rating.color >> 8 & 0xFF) / 4) << 8) | ((w.rating.color & 0xFF) / 4);
+        drawBubbleBox(ctx, rx, badgeY, badgeW, badgeH, dark, w.rating.color);
+        drawTextCentered(ctx, Text.literal(w.rating.label).asOrderedText(), rx + badgeW / 2.0,
+                badgeY + (badgeH - 8 * k) / 2.0 + k / 2.0, k, w.rating.color);
+
+        int maxInfoW = (int) (rw / k);
+        double iy = badgeY + badgeH + 5;
+        java.util.List<String> infos = new java.util.ArrayList<>();
+        infos.add("Hora: " + w.time + "  (dia " + w.day + ")");
+        infos.add("Bioma: " + w.biome);
+        if (w.hasPrecipitation() || w.kind == WeatherInfo.Kind.OVERCAST) {
+            infos.add((w.kind == WeatherInfo.Kind.SNOW ? "Neve: " : "Chuva: ") + Math.round(w.intensity * 100) + "%");
+        }
+        for (String line : infos) {
+            drawText(ctx, Text.literal(this.textRenderer.trimToWidth(line, maxInfoW)).asOrderedText(),
+                    rx, iy, k, 0xFFC8D0F0);
+            iy += lh + 1;
+        }
+
+        // comentarios sobre o clima atual
+        final int boxX1 = CHAT_X1;
+        final int boxX2 = CHAT_X2;
+        final int boxY1 = sy + sh + 6;
+        final int boxY2 = SCREEN_Y + SCREEN_H - 4;
+        drawBubbleBox(ctx, boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1, 0xFF05082A, COLOR_LINE);
+
+        final int padX = 4;
+        int textW = (int) ((boxX2 - boxX1 - 2 * padX - 6) / k);
+        java.util.List<OrderedText> lines = new java.util.ArrayList<>();
+        for (String c : w.comments) {
+            lines.addAll(this.textRenderer.wrapLines(Text.literal("\u2022 " + c), textW));
+        }
+        int visible = Math.max(1, (int) ((boxY2 - boxY1 - 6) / lh));
+        int maxScroll = Math.max(0, lines.size() - visible);
+        weatherScroll = Math.max(0, Math.min(maxScroll, weatherScroll));
+
+        double ty = boxY1 + 3 + k / 2.0;
+        for (int i = weatherScroll; i < Math.min(lines.size(), weatherScroll + visible); i++) {
+            drawText(ctx, lines.get(i), boxX1 + padX, ty, k, 0xFFFFFFFF);
+            ty += lh;
+        }
+        if (maxScroll > 0) {
+            // setinhas: ha mais texto acima/abaixo
+            if (weatherScroll > 0) {
+                drawText(ctx, Text.literal("^").asOrderedText(), boxX2 - 7, boxY1 + 2, k, 0xFFA0A8D0);
+            }
+            if (weatherScroll < maxScroll) {
+                drawText(ctx, Text.literal("v").asOrderedText(), boxX2 - 7, boxY2 - 3 - 8 * k, k, 0xFFA0A8D0);
+            }
+        }
+
+        // moldura, barra de status e navegacao por cima
+        drawBars(ctx);
+    }
+
+    // ------------------------------------------------------------------ Notas / Relogio / Musica / Em desenvolvimento
+
+    /** Fundo da tela + cabecalho com o titulo do app (padrao dos apps simples). */
+    private void drawScreenFrame(DrawContext ctx, String title) {
+        final double k = chatK();
+        ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+        double hk = k * 1.15;
+        drawTextCentered(ctx, Text.literal(title).asOrderedText(),
+                (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
+        ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
+    }
+
+    private void drawNotes(DrawContext ctx) {
+        final double k = chatK();
+        final double lh = 9 * k;
+        drawScreenFrame(ctx, "Notas");
+
+        drawBubbleBox(ctx, NOTES_X1, NOTES_Y1, NOTES_X2 - NOTES_X1, NOTES_Y2 - NOTES_Y1, 0xFF05082A, COLOR_LINE);
+        final int padX = 4;
+        int textW = (int) ((NOTES_X2 - NOTES_X1 - 2 * padX - 6) / k);
+        boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+        List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal(Notes.text() + (blink ? "_" : " ")), textW);
+
+        int visible = Math.max(1, (int) ((NOTES_Y2 - NOTES_Y1 - 6) / lh));
+        int maxScroll = Math.max(0, lines.size() - visible);
+        notesScroll = Math.max(0, Math.min(maxScroll, notesScroll));
+        int first = Math.max(0, lines.size() - visible - notesScroll);
+
+        double ty = NOTES_Y1 + 3 + k / 2.0;
+        for (int i = first; i < Math.min(lines.size(), first + visible); i++) {
+            drawText(ctx, lines.get(i), NOTES_X1 + padX, ty, k, 0xFFFFFFFF);
+            ty += lh;
+        }
+        if (maxScroll > 0) {
+            if (first > 0) {
+                drawText(ctx, Text.literal("^").asOrderedText(), NOTES_X2 - 7, NOTES_Y1 + 2, k, 0xFFA0A8D0);
+            }
+            if (notesScroll > 0) {
+                drawText(ctx, Text.literal("v").asOrderedText(), NOTES_X2 - 7, NOTES_Y2 - 3 - 8 * k, k, 0xFFA0A8D0);
+            }
+        }
+        drawBars(ctx);
+    }
+
+    private void drawClock(DrawContext ctx) {
+        drawScreenFrame(ctx, "Rel\u00f3gio");
+        String time = LocalTime.now().format(CLOCK_BIG);
+        // letras grandes e nitidas: multiplo inteiro de pixels reais, cabendo na largura da tela
+        double fit = (CHAT_X2 - CHAT_X1 - 20) / (double) Math.max(1, this.textRenderer.getWidth(time));
+        double k = Math.max(1, Math.floor(Math.min(fit, 6.0) * realS)) / realS;
+        double cx = (CHAT_X1 + CHAT_X2) / 2.0;
+        double cy = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2.0 - 4 * k;
+        drawTextCentered(ctx, Text.literal(time).asOrderedText(), cx, cy, k, 0xFFFFFFFF);
+        drawBars(ctx);
+    }
+
+    private int musicVisible() {
+        return Math.max(1, (MUS_BOTTOM - MUS_TOP) / MUS_ROW_H);
+    }
+
+    private void drawMusic(DrawContext ctx, double pmx, double pmy) {
+        final double k = chatK();
+        drawScreenFrame(ctx, "M\u00fasica");
+
+        final int total = MusicPlayer.TRACKS.length;
+        final int visible = musicVisible();
+        final int maxScroll = Math.max(0, total - visible);
+        musicScroll = Math.max(0, Math.min(maxScroll, musicScroll));
+        final boolean playing = MusicPlayer.isPlaying(this.client);
+        final int rowX2 = CHAT_X2 - (maxScroll > 0 ? 5 : 0);
+
+        for (int r = 0; r < visible; r++) {
+            int i = musicScroll + r;
+            if (i >= total) break;
+            int y = MUS_TOP + r * MUS_ROW_H;
+            boolean cur = playing && i == MusicPlayer.current();
+            boolean hover = inRect(pmx, pmy, CHAT_X1, y, rowX2 - CHAT_X1, MUS_ROW_H);
+            int fill = cur ? 0xFF2E7D32 : hover ? 0xFF3B4A78 : (i % 2 == 0 ? 0xFF111A66 : 0xFF0F1658);
+            ctx.fill(CHAT_X1, y, rowX2, y + MUS_ROW_H - 1, fill);
+            MusicPlayer.Track t = MusicPlayer.TRACKS[i];
+            double ty = y + (MUS_ROW_H - 1 - 8 * k) / 2.0 + k / 2.0;
+            drawText(ctx, Text.literal((cur ? "> " : "") + t.name()).asOrderedText(), CHAT_X1 + 4, ty, k, 0xFFFFFFFF);
+            String artist = t.artist();
+            double aw = this.textRenderer.getWidth(artist) * k;
+            drawText(ctx, Text.literal(artist).asOrderedText(), rowX2 - 4 - aw, ty, k, cur ? 0xFFD0FFD0 : 0xFFA0A8D0);
+        }
+        if (maxScroll > 0) {
+            // barra de rolagem
+            int trackH = MUS_BOTTOM - MUS_TOP;
+            int barH = Math.max(6, trackH * visible / total);
+            int barY = MUS_TOP + (trackH - barH) * musicScroll / maxScroll;
+            ctx.fill(CHAT_X2 - 3, MUS_TOP, CHAT_X2, MUS_BOTTOM, 0xFF0A0F3A);
+            ctx.fill(CHAT_X2 - 3, barY, CHAT_X2, barY + barH, 0xFF8FA0CC);
+        }
+
+        // barra de baixo: "tocando agora" + botao Parar
+        ctx.fill(SCREEN_X, MUS_BOTTOM, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+        ctx.fill(CHAT_X1, MUS_BOTTOM, CHAT_X2, MUS_BOTTOM + 1, COLOR_LINE);
+        String status;
+        if (playing && MusicPlayer.current() >= 0) {
+            long s = MusicPlayer.elapsedSeconds();
+            status = "Tocando: " + MusicPlayer.TRACKS[MusicPlayer.current()].name()
+                    + "  " + (s / 60) + ":" + String.format("%02d", s % 60);
+        } else {
+            status = "Escolha uma m\u00fasica";
+        }
+        int maxW = (int) ((MUS_STOP_X - CHAT_X1 - 8) / k);
+        double ty = MUS_STOP_Y + (MUS_STOP_H - 8 * k) / 2.0 + k / 2.0;
+        drawText(ctx, Text.literal(this.textRenderer.trimToWidth(status, maxW)).asOrderedText(),
+                CHAT_X1 + 2, ty, k, playing ? 0xFF80FF90 : 0xFFA0A8D0);
+        drawButton(ctx, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H, "Parar",
+                inRect(pmx, pmy, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H), playing);
+        drawBars(ctx);
+    }
+
+    /** Trata cliques do app Musica. Devolve true se o clique foi usado. */
+    private boolean musicClick(double px, double py) {
+        if (inRect(px, py, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H)) {
+            MusicPlayer.stop(this.client);
+            return true;
+        }
+        if (px >= CHAT_X1 && px < CHAT_X2 && py >= MUS_TOP && py < MUS_BOTTOM) {
+            int row = (int) ((py - MUS_TOP) / MUS_ROW_H);
+            int i = musicScroll + row;
+            if (row < musicVisible() && i < MusicPlayer.TRACKS.length) {
+                if (MusicPlayer.isPlaying(this.client) && MusicPlayer.current() == i) {
+                    MusicPlayer.stop(this.client);      // clicar de novo na faixa tocando para a musica
+                } else {
+                    MusicPlayer.play(this.client, i);
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void drawDev(DrawContext ctx) {
+        final double k = chatK();
+        drawScreenFrame(ctx, devTitle);
+        double tk = k * 1.5;
+        int wrapW = (int) ((CHAT_X2 - CHAT_X1 - 10) / tk);
+        List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal("Aplicativo em Desenvolvimento ;("), wrapW);
+        double lh = 9 * tk;
+        double y = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2.0 - lines.size() * lh / 2.0;
+        for (OrderedText l : lines) {
+            drawTextCentered(ctx, l, (CHAT_X1 + CHAT_X2) / 2.0, y, tk, 0xFFFFFFFF);
+            y += lh;
+        }
+        drawBars(ctx);
+    }
+
     private void drawApp(DrawContext ctx, ChildManager.Status st) {
         ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, 0xFF000000);
         if (st == ChildManager.Status.RUNNING && texture != null) {
@@ -877,8 +1182,9 @@ public class TabletScreen extends Screen {
             }
             case 1 -> goHome();
             case 2 -> {
-                if (view == View.SCUTE || view == View.SETTINGS) {
-                    goHome();       // o ScuteAI nao tem processo para encerrar
+                if (view != View.APP) {
+                    if (view == View.MUSIC) MusicPlayer.stop(this.client);   // fechar o app de musica para a musica
+                    goHome();       // so o Minecraft tem um processo para encerrar
                     return;
                 }
                 uncapture();
@@ -893,6 +1199,7 @@ public class TabletScreen extends Screen {
     }
 
     private void goHome() {
+        Notes.save();
         uncapture();
         view = View.HOME;
     }
@@ -984,10 +1291,36 @@ public class TabletScreen extends Screen {
                 view = View.SETTINGS;
                 return true;
             }
+            if (app == APP_WEATHER) {
+                view = View.WEATHER;
+                weatherScroll = 0;
+                return true;
+            }
+            if (app == APP_CLOCK) {
+                view = View.CLOCK;
+                return true;
+            }
+            if (app == APP_NOTES) {
+                view = View.NOTES;
+                notesScroll = 0;
+                return true;
+            }
+            if (app == APP_MUSIC) {
+                view = View.MUSIC;
+                return true;
+            }
+            if (app == 1 || app == 2 || app == APP_BOOKS || app == APP_STORE) {
+                devTitle = APP_NAMES[app];     // Camera, Galeria, Livros e App Store: em desenvolvimento
+                view = View.DEV;
+                return true;
+            }
             if (app >= 0) {
-                return true; // ainda sem funcao
+                return true; // ainda sem funcao (Crafting)
             }
             if (view == View.SETTINGS && settingsClick(panelX(mx), panelY(my))) {
+                return true;
+            }
+            if (view == View.MUSIC && musicClick(panelX(mx), panelY(my))) {
                 return true;
             }
         }
@@ -1032,6 +1365,18 @@ public class TabletScreen extends Screen {
             chatScroll += amount * 12;   // clampado no proximo frame
             return true;
         }
+        if (view == View.WEATHER) {
+            weatherScroll -= (int) Math.signum(amount);   // clampado no proximo frame
+            return true;
+        }
+        if (view == View.NOTES) {
+            notesScroll += (int) Math.signum(amount);     // clampado no proximo frame
+            return true;
+        }
+        if (view == View.MUSIC) {
+            musicScroll -= (int) Math.signum(amount);     // clampado no proximo frame
+            return true;
+        }
         return super.mouseScrolled(mx, my, amount);
     }
 
@@ -1071,6 +1416,50 @@ public class TabletScreen extends Screen {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) goHome();
             return true;
         }
+        if (view == View.WEATHER) {
+            switch (keyCode) {
+                case GLFW.GLFW_KEY_ESCAPE -> goHome();
+                case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_PAGE_UP -> weatherScroll--;
+                case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_DOWN -> weatherScroll++;
+                default -> { }
+            }
+            return true;
+        }
+        if (view == View.NOTES) {
+            switch (keyCode) {
+                case GLFW.GLFW_KEY_ESCAPE -> goHome();
+                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> Notes.append("\n");
+                case GLFW.GLFW_KEY_BACKSPACE -> Notes.backspace();
+                case GLFW.GLFW_KEY_PAGE_UP, GLFW.GLFW_KEY_UP -> notesScroll++;
+                case GLFW.GLFW_KEY_PAGE_DOWN, GLFW.GLFW_KEY_DOWN -> notesScroll--;
+                case GLFW.GLFW_KEY_V -> {
+                    if (Screen.hasControlDown()) {
+                        String clip = this.client.keyboard.getClipboard();
+                        if (clip != null) {
+                            for (char c : clip.replace("\r", "").toCharArray()) {
+                                if (c == '\n') Notes.append("\n");
+                                else typeNoteChar(c);
+                            }
+                        }
+                    }
+                }
+                default -> { }
+            }
+            return true;
+        }
+        if (view == View.MUSIC) {
+            switch (keyCode) {
+                case GLFW.GLFW_KEY_ESCAPE -> goHome();
+                case GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_PAGE_UP -> musicScroll--;
+                case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_PAGE_DOWN -> musicScroll++;
+                default -> { }
+            }
+            return true;
+        }
+        if (view == View.CLOCK || view == View.DEV) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) goHome();
+            return true;
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             this.close();
             return true;
@@ -1097,7 +1486,17 @@ public class TabletScreen extends Screen {
             typeChar(chr);
             return true;
         }
+        if (view == View.NOTES) {
+            typeNoteChar(chr);
+            return true;
+        }
         return super.charTyped(chr, modifiers);
+    }
+
+    private void typeNoteChar(char c) {
+        if (net.minecraft.SharedConstants.isValidChar(c)) {
+            Notes.append(String.valueOf(c));
+        }
     }
 
     private void typeChar(char c) {
@@ -1129,6 +1528,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public void removed() {
+        Notes.save();
         uncapture();
         destroyTexture();
     }

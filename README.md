@@ -44,7 +44,7 @@ Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft
 
 
 ## Apps extras da tela inicial
-Relogio, Crafting, Notas, Livros, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao), exceto **Ajustes**. A tela inicial e uma grade que quebra linha conforme a largura.
+Relogio, Crafting, Notas, Livros, Ajustes e Clima (icones 20x20 em `textures/gui/*_icon.png`). Por enquanto so ilustrativos (sem funcao), exceto **Ajustes** e **Clima**. A tela inicial e uma grade que quebra linha conforme a largura.
 
 
 ## Ajustes: papel de parede
@@ -52,3 +52,25 @@ Abra o app **Ajustes** -> **Escolher imagem** (seletor de arquivos do sistema) o
 
 ## Ajustes: cores da interface
 Na aba **Cores** de Ajustes voce escolhe a cor do **painel superior** (barra de status) e do **painel lateral** (botoes de navegacao) entre uma paleta de 10 cores; o quadrado com `x` volta ao padrao. As escolhas ficam em `config/tablet_inception/theme.properties`.
+
+
+## Clima (app que le o clima do jogo)
+Toque no icone **Clima**. O app le o clima **real** do mundo onde voce esta e mostra:
+- **Nota**: `BOM` (verde, ceu limpo), `REGULAR` (amarelo, neve ou nublado em bioma seco), `RUIM` (vermelho, chuva ou tempestade) ou `SEM CLIMA` (Nether e Fim).
+- Titulo do tempo: Ensolarado, Amanhecer, Entardecer, Noite limpa, Chuva (tambem "Comecando a chover" / "Chuva diminuindo"), Nevando, Tempestade, Nublado...
+- Cena animada: sol e lua acompanham a hora do jogo (com a fase da lua), nuvens, chuva, neve, estrelas e raios.
+- Hora do jogo e dia, bioma atual e intensidade da chuva/neve.
+- **Comentarios** sobre o tempo agora (dormir, monstros, pesca, raios, neve em po, se voce esta sob um teto ou no subsolo...). Roda do mouse, setas ou PageUp/PageDown rolam a lista.
+- Biomas secos (deserto, savana, mesa) nao tem chuva: o app avisa "Nublado". Biomas gelados mostram neve.
+
+O icone do Clima na tela inicial ganha uma **bolinha** com a nota do tempo, e a barra de status mostra o clima atual no centro (verde/amarelo/vermelho).
+
+Arquivos: `client/WeatherInfo.java` (leitura do clima e textos dos comentarios), `client/WeatherArt.java` (cena animada) e `drawWeather` em `client/TabletScreen.java`.
+
+
+## Apps simples (Notas, Relogio, Musica e os "em desenvolvimento")
+- **Notas**: area de texto para o jogador anotar. Digite, **Enter** quebra a linha, **Backspace** apaga, **Ctrl+V** cola, roda do mouse / setas rolam. Salva sozinho em `config/tablet_inception/notes.txt` (limite de 4000 caracteres).
+- **Relogio**: mostra apenas a hora atual (HH:mm:ss) em letras grandes.
+- **Musica**: lista com as musicas do Minecraft (os discos: 13, Cat, Blocks, Chirp, Far, Mall, Mellohi, Stal, Strad, Ward, 11, Wait, Otherside, 5, Pigstep, Relic). Clique em uma para tocar; clicar de novo nela (ou em **Parar**, ou no quadrado de navegacao) para a musica. Se fechar o tablet a musica continua tocando. Para mudar a lista, edite `TRACKS` em `client/MusicPlayer.java`.
+- **Camera**, **Galeria**, **Livros** e **App Store**: mostram "Aplicativo em Desenvolvimento ;(".
+- Os icones novos (`music_icon.png` e `app_store_icon.png`, 20x20) ficam em `textures/gui/`. **Crafting** continua so ilustrativo.
