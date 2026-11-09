@@ -19,11 +19,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # Instala o Gradle 8.5 diretamente (nao precisa do gradle-wrapper.jar no repositorio)
-      - name: Setup Gradle
+      # Cache do Gradle (nao baixa o Gradle em si)
+      - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.5
+
+      # Baixa o Gradle 8.5 com varias tentativas e um espelho, para sobreviver a erros 504 temporarios
+      - name: Install Gradle 8.5
+        run: |
+          set -e
+          for url in \
+            "https://services.gradle.org/distributions/gradle-8.5-bin.zip" \
+            "https://github.com/gradle/gradle-distributions/releases/download/v8.5.0/gradle-8.5-bin.zip"; do
+            echo "Baixando de $url"
+            if curl -fSL --retry 6 --retry-delay 10 --retry-all-errors -o gradle.zip "$url"; then
+              ok=1
+              break
+            fi
+          done
+          [ "${ok:-0}" = "1" ] || { echo "Nao foi possivel baixar o Gradle"; exit 1; }
+          unzip -q gradle.zip -d "$HOME"
+          echo "$HOME/gradle-8.5/bin" >> "$GITHUB_PATH"
 
       - name: Build
         run: gradle build --no-daemon
