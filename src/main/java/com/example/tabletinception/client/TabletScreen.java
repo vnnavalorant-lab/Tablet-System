@@ -29,6 +29,8 @@ import java.util.Set;
  *  - tablet_panel.png : painel completo (tela inicial).
  *  - tablet_border.png: moldura + barra de status/navegacao translucidas, desenhada POR CIMA do jogo.
  *
+ * Apps: Minecraft (jogo interno), Camera, Galeria (ainda sem funcao) e ScuteAI (chat simples com respostas prontas).
+ *
  * Navegacao (coluna da direita):  triangulo = voltar | circulo = inicio | quadrado = fechar o app.
  * No app: clique na tela captura mouse/teclado, Ctrl direito solta, Esc (solto) fecha o tablet.
  */
@@ -38,13 +40,16 @@ public class TabletScreen extends Screen {
     private static final Identifier ICON = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/minecraft_icon.png");
     private static final Identifier ICON_CAMERA = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/camera_icon.png");
     private static final Identifier ICON_GALLERY = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/gallery_icon.png");
+    private static final Identifier ICON_SCUTE = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_ai_icon.png");
+    private static final Identifier SCUTE_SKIN = new Identifier(TabletInceptionMod.MOD_ID, "textures/gui/scute_skin.png");
 
     // Apps da tela inicial (na ordem em que aparecem, da esquerda para a direita)
     private static final int APP_MINECRAFT = 0;
     private static final int APP_CAMERA = 1;
     private static final int APP_GALLERY = 2;
-    private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY};
-    private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria"};
+    private static final int APP_SCUTE = 3;
+    private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE};
+    private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI"};
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -64,13 +69,25 @@ public class TabletScreen extends Screen {
     private static final int NAV_HOME_END = 107;
     private static final int ICON_SIZE = 20;
 
+    // Chat do ScuteAI (pixels do painel)
+    private static final int CHAT_X1 = SCREEN_X + 4;       // limite esquerdo do conteudo
+    private static final int CHAT_X2 = NAV_X - 4;          // limite direito (antes da coluna de navegacao)
+    private static final int CHAT_HEADER_Y = SCREEN_Y + STATUS_H;
+    private static final int CHAT_HEADER_H = 12;
+    private static final int CHAT_INPUT_H = 15;
+    private static final int CHAT_TOP = CHAT_HEADER_Y + CHAT_HEADER_H;
+    private static final int CHAT_BOTTOM = SCREEN_Y + SCREEN_H - CHAT_INPUT_H;
+    private static final int HEAD = 11;                    // tamanho do rosto ao lado das mensagens
+    private static final int BUBBLE_MAX_W = 140;
+    private static final int COLOR_BG = 0xFF0A1250;
+    private static final int COLOR_LINE = 0xFF4A5590;
     // Margens da janela (fracao) e espaco da dica de texto
     private static final double MARGIN_X = 0.04;
     private static final double MARGIN_TOP = 0.045;
     private static final double MARGIN_BOTTOM = 0.06;
     private static final int HINT_H = 14;
 
-    private enum View { HOME, APP }
+    private enum View { HOME, APP, SCUTE }
 
     private View view = View.HOME;
 
@@ -95,6 +112,9 @@ public class TabletScreen extends Screen {
     private int texH;
     private int lastSeq;
     private final int[] meta = new int[3];
+
+    private double chatScroll;     // pixels do painel acima do fim da conversa
+    private String chatInput = "";
 
     private boolean captured;
     private boolean cursorDisabled;
@@ -226,6 +246,7 @@ public class TabletScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         this.renderBackground(ctx);
+        ScuteAi.tick();
 
         ChildManager.Status st = ChildManager.status();
         computeLayout(st);
@@ -242,6 +263,8 @@ public class TabletScreen extends Screen {
         if (view == View.HOME) {
             ctx.drawTexture(PANEL, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
             drawHome(ctx, st, panelX(mouseX), panelY(mouseY));
+        } else if (view == View.SCUTE) {
+            drawScute(ctx);
         } else {
             drawApp(ctx, st);
         }
@@ -255,7 +278,9 @@ public class TabletScreen extends Screen {
             String hint = view == View.APP
                     ? (captured ? "Ctrl direito: soltar mouse e teclado"
                                 : "Clique na tela para controlar  |  Esc: fechar o tablet")
-                    : "Toque no icone do Minecraft para abrir  |  Esc: fechar o tablet";
+                    : view == View.SCUTE
+                    ? "Digite e aperte Enter  |  Roda do mouse: rolar  |  Esc: voltar"
+                    : "Toque em um app para abrir  |  Esc: fechar o tablet";
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, hintY, 0xA0A0A0);
         }
 
@@ -306,6 +331,150 @@ public class TabletScreen extends Screen {
                 ctx.fill(cx, cy, cx + 2, cy + 2, 0xFFFFFFFF);
             }
         }
+    }
+
+    // ------------------------------------------------------------------ ScuteAI
+
+    private double chatK() {
+        return Math.max(1, Math.round(realS * 0.6f)) / (double) realS;
+    }
+
+    /** Rosto (8x8 + camada do chapeu) de uma skin 64x64. */
+    private void drawHead(DrawContext ctx, Identifier skin, int x, int y, int size) {
+        ctx.drawTexture(skin, x, y, size, size, 8f, 8f, 8, 8, 64, 64);
+        ctx.drawTexture(skin, x, y, size, size, 40f, 8f, 8, 8, 64, 64);
+    }
+
+    private Identifier playerSkin() {
+        if (this.client.player != null) return this.client.player.getSkinTexture();
+        return SCUTE_SKIN;
+    }
+
+    private String playerName() {
+        return this.client.player != null ? this.client.player.getName().getString() : "jogador";
+    }
+
+    /** Retangulo com cantos "cortados" (estilo pixel art), com borda de 1 pixel. */
+    private void drawBubbleBox(DrawContext ctx, int x, int y, int w, int h, int fill, int border) {
+        ctx.fill(x + 1, y, x + w - 1, y + h, border);
+        ctx.fill(x, y + 1, x + w, y + h - 1, border);
+        ctx.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
+    }
+
+    private void drawScute(DrawContext ctx) {
+        final double k = chatK();
+        final double lineH = 9 * k;
+        final int padX = 3;
+        final double padY = 2;
+        final int viewH = CHAT_BOTTOM - CHAT_TOP;
+
+        ctx.fill(SCREEN_X, SCREEN_Y, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+
+        // ---- monta a lista (mensagens + indicador "digitando")
+        List<ScuteAi.Msg> msgs = new java.util.ArrayList<>(ScuteAi.messages());
+        boolean typing = ScuteAi.isTyping();
+        if (typing) msgs.add(new ScuteAi.Msg(false, "..."));
+
+        int n = msgs.size();
+        List<List<OrderedText>> wrapped = new java.util.ArrayList<>(n);
+        int[] bw = new int[n];
+        int[] bh = new int[n];
+        int[] rowH = new int[n];
+        final int gap = 5;
+        double total = 0;
+        for (int i = 0; i < n; i++) {
+            int maxText = (int) ((BUBBLE_MAX_W - 2 * padX) / k);
+            List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal(msgs.get(i).text()), maxText);
+            wrapped.add(lines);
+            int w = 0;
+            for (OrderedText l : lines) w = Math.max(w, this.textRenderer.getWidth(l));
+            bw[i] = (int) Math.ceil(w * k) + 2 * padX;
+            bh[i] = (int) Math.ceil(lines.size() * lineH + 2 * padY);
+            rowH[i] = Math.max(bh[i], HEAD);
+            total += rowH[i] + gap;
+        }
+        double maxScroll = Math.max(0, total + gap - viewH);
+        chatScroll = Math.max(0, Math.min(maxScroll, chatScroll));
+
+        // ---- desenha de baixo para cima
+        double y = CHAT_BOTTOM - gap + chatScroll;
+        for (int i = n - 1; i >= 0; i--) {
+            int rh = rowH[i];
+            int top = (int) Math.round(y - rh);
+            if (top + rh < CHAT_TOP) break;           // acima da area visivel
+            if (top <= CHAT_BOTTOM) {
+                ScuteAi.Msg m = msgs.get(i);
+                int by = top + (rh - bh[i]) / 2;
+                int hy = top + (rh - HEAD) / 2;
+                int bx;
+                int fill;
+                int border;
+                if (m.fromPlayer()) {
+                    drawHead(ctx, playerSkin(), CHAT_X2 - HEAD, hy, HEAD);
+                    bx = CHAT_X2 - HEAD - 3 - bw[i];
+                    fill = 0xFF6B3E6E;
+                    border = 0xFF9A6FA0;
+                } else {
+                    drawHead(ctx, SCUTE_SKIN, CHAT_X1, hy, HEAD);
+                    bx = CHAT_X1 + HEAD + 3;
+                    fill = 0xFF3B4A78;
+                    border = 0xFF8FA0CC;
+                }
+                drawBubbleBox(ctx, bx, by, bw[i], bh[i], fill, border);
+                if (typing && i == n - 1) {
+                    int dots = 1 + (int) ((System.currentTimeMillis() / 300) % 3);
+                    drawText(ctx, Text.literal(".".repeat(dots)).asOrderedText(),
+                            bx + padX, by + padY + k, k, 0xFFFFFFFF);
+                } else {
+                    double ty = by + padY + k / 2.0;
+                    for (OrderedText l : wrapped.get(i)) {
+                        drawText(ctx, l, bx + padX, ty, k, 0xFFFFFFFF);
+                        ty += lineH;
+                    }
+                }
+            }
+            y -= rh + gap;
+        }
+
+        // ---- cabecalho (cobre mensagens que passam do topo)
+        ctx.fill(SCREEN_X, CHAT_HEADER_Y, SCREEN_X + SCREEN_W, CHAT_TOP, COLOR_BG);
+        double hk = k * 1.15;
+        drawTextCentered(ctx, Text.literal(ScuteAi.NAME).asOrderedText(),
+                (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
+        ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
+
+        // ---- barra de digitacao (cobre mensagens que passam da base)
+        ctx.fill(SCREEN_X, CHAT_BOTTOM, SCREEN_X + SCREEN_W, SCREEN_Y + SCREEN_H, COLOR_BG);
+        int ix1 = CHAT_X1;
+        int ix2 = CHAT_X2;
+        int iy1 = CHAT_BOTTOM + 2;
+        int iy2 = SCREEN_Y + SCREEN_H - 3;
+        drawBubbleBox(ctx, ix1, iy1, ix2 - ix1, iy2 - iy1, 0xFF05082A, COLOR_LINE);
+
+        double ik = k;
+        double ty = iy1 + (iy2 - iy1 - 8 * ik) / 2.0 + ik / 2.0;
+        boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+        if (chatInput.isEmpty()) {
+            drawText(ctx, Text.literal("Digite uma mensagem...").asOrderedText(), ix1 + 4, ty, ik, 0xFF707AA8);
+            if (blink) drawText(ctx, Text.literal("_").asOrderedText(), ix1 + 4, ty, ik, 0xFFFFFFFF);
+        } else {
+            String shown = chatInput;
+            double maxW = (ix2 - ix1) - 12;
+            while (shown.length() > 1 && this.textRenderer.getWidth(shown + "_") * ik > maxW) {
+                shown = shown.substring(1);
+            }
+            drawText(ctx, Text.literal(shown + (blink ? "_" : "")).asOrderedText(), ix1 + 4, ty, ik, 0xFFFFFFFF);
+        }
+
+        // ---- moldura, barra de status e navegacao por cima
+        ctx.drawTexture(BORDER, 0, 0, PANEL_W, PANEL_H, 0f, 0f, PANEL_W, PANEL_H, PANEL_W, PANEL_H);
+    }
+
+    private void sendChat() {
+        if (chatInput.trim().isEmpty()) return;
+        ScuteAi.send(chatInput, playerName());
+        chatInput = "";
+        chatScroll = 0;
     }
 
     private void drawApp(DrawContext ctx, ChildManager.Status st) {
@@ -401,11 +570,15 @@ public class TabletScreen extends Screen {
     private void onNav(int nav) {
         switch (nav) {
             case 0 -> {
-                if (view == View.APP) goHome();
+                if (view != View.HOME) goHome();
                 else this.close();
             }
             case 1 -> goHome();
             case 2 -> {
+                if (view == View.SCUTE) {
+                    goHome();       // o ScuteAI nao tem processo para encerrar
+                    return;
+                }
                 uncapture();
                 ChildManager.Status st = ChildManager.status();
                 if (st == ChildManager.Status.STARTING || st == ChildManager.Status.RUNNING) {
@@ -500,6 +673,11 @@ public class TabletScreen extends Screen {
                 openApp();
                 return true;
             }
+            if (app == APP_SCUTE) {
+                view = View.SCUTE;
+                chatScroll = 0;
+                return true;
+            }
             if (app == APP_CAMERA || app == APP_GALLERY) {
                 return true; // ainda sem funcao
             }
@@ -541,6 +719,10 @@ public class TabletScreen extends Screen {
             ChildManager.channel().sendInput(Channel.IN_MOUSE_SCROLL, 0, 0, 0, 0, 0, amount);
             return true;
         }
+        if (view == View.SCUTE) {
+            chatScroll += amount * 12;   // clampado no proximo frame
+            return true;
+        }
         return super.mouseScrolled(mx, my, amount);
     }
 
@@ -553,6 +735,27 @@ public class TabletScreen extends Screen {
             }
             int action = pressedKeys.add(keyCode) ? 1 : 2;
             ChildManager.channel().sendInput(Channel.IN_KEY, keyCode, scanCode, action, modifiers, 0, 0);
+            return true;
+        }
+        if (view == View.SCUTE) {
+            switch (keyCode) {
+                case GLFW.GLFW_KEY_ESCAPE -> goHome();
+                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> sendChat();
+                case GLFW.GLFW_KEY_BACKSPACE -> {
+                    if (!chatInput.isEmpty()) chatInput = chatInput.substring(0, chatInput.length() - 1);
+                }
+                case GLFW.GLFW_KEY_PAGE_UP -> chatScroll += 40;
+                case GLFW.GLFW_KEY_PAGE_DOWN -> chatScroll -= 40;
+                case GLFW.GLFW_KEY_V -> {
+                    if (Screen.hasControlDown()) {
+                        String clip = this.client.keyboard.getClipboard();
+                        if (clip != null) {
+                            for (char c : clip.toCharArray()) typeChar(c);
+                        }
+                    }
+                }
+                default -> { }
+            }
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -577,7 +780,17 @@ public class TabletScreen extends Screen {
             ChildManager.channel().sendInput(Channel.IN_CHAR, chr, modifiers, 0, 0, 0, 0);
             return true;
         }
+        if (view == View.SCUTE) {
+            typeChar(chr);
+            return true;
+        }
         return super.charTyped(chr, modifiers);
+    }
+
+    private void typeChar(char c) {
+        if (net.minecraft.SharedConstants.isValidChar(c) && chatInput.length() < ScuteAi.MAX_INPUT) {
+            chatInput += c;
+        }
     }
 
     /** Solta teclas/botoes pressionados e devolve o cursor ao jogo principal. */
