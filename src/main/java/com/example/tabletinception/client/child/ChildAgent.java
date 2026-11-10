@@ -41,9 +41,9 @@ public final class ChildAgent {
             if (pid > 0) {
                 ProcessHandle.of(pid).ifPresent(h -> h.onExit().thenRun(ChildAgent::requestStop));
             }
-            TabletInceptionMod.LOGGER.info("[Tablet Inception] Agente do jogo interno iniciado.");
+            TabletInceptionMod.LOGGER.info("[Ipad-Scute6o] Agente do jogo interno iniciado.");
         } catch (Exception e) {
-            TabletInceptionMod.LOGGER.error("[Tablet Inception] Falha ao iniciar o agente", e);
+            TabletInceptionMod.LOGGER.error("[Ipad-Scute6o] Falha ao iniciar o agente", e);
         }
     }
 
@@ -79,7 +79,7 @@ public final class ChildAgent {
             } catch (Throwable t) {
                 if (!errorLogged) {
                     errorLogged = true;
-                    TabletInceptionMod.LOGGER.error("[Tablet Inception] Erro ao aplicar entrada", t);
+                    TabletInceptionMod.LOGGER.error("[Ipad-Scute6o] Erro ao aplicar entrada", t);
                 }
             }
         });
@@ -137,7 +137,7 @@ public final class ChildAgent {
         } catch (Throwable t) {
             if (!errorLogged) {
                 errorLogged = true;
-                TabletInceptionMod.LOGGER.error("[Tablet Inception] Erro ao capturar frame", t);
+                TabletInceptionMod.LOGGER.error("[Ipad-Scute6o] Erro ao capturar frame", t);
             }
         }
     }

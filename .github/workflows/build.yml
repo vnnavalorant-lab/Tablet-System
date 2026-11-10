@@ -46,7 +46,7 @@ jobs:
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: tablet-inception
+          name: ipad-scute6o
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar

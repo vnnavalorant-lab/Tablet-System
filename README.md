@@ -1,4 +1,6 @@
-# Tablet Inception (Fabric 1.20.1)
+# Ipad-Scute6o (Fabric 1.20.1)
+
+<p align="center"><img src="icon.gif" width="160" alt="Ipad-Scute6o"></p>
 
 > English version: [README.en.md](README.en.md)
 

@@ -97,7 +97,7 @@ public final class ChildManager {
         jars.addAll(modJars("tablet_inception"));
         jars.addAll(modJars("fabric-api"));
         if (jars.size() < 2) {
-            throw new IOException("Nao encontrei os .jar do Tablet Inception e do Fabric API.");
+            throw new IOException("Nao encontrei os .jar do Ipad-Scute6o e do Fabric API.");
         }
         Set<String> keep = new HashSet<>();
         for (Path jar : jars) {

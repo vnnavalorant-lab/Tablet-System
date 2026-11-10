@@ -1,4 +1,6 @@
-# Tablet Inception (Fabric 1.20.1)
+# Ipad-Scute6o (Fabric 1.20.1)
+
+<p align="center"><img src="icon.gif" width="160" alt="Ipad-Scute6o"></p>
 
 **Tablet** item: right-click opens a screen that shows and controls a Minecraft running in another process. The mod is translated into **English (en_us)** and **Portuguese (pt_br)**, and the tablet UI uses a **dark theme by default**.
 

@@ -30,6 +30,6 @@ public class TabletInceptionMod implements ModInitializer {
         Registry.register(Registries.ITEM, new Identifier(MOD_ID, "tablet"), TABLET);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> entries.add(TABLET));
         TabletServer.init();
-        LOGGER.info("Tablet Inception carregado.");
+        LOGGER.info("Ipad-Scute6o carregado.");
     }
 }

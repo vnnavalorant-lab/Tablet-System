@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "tablet_inception",
   "version": "${version}",
-  "name": "Tablet Inception",
+  "name": "Ipad-Scute6o",
   "description": "A tablet that runs a Minecraft inside Minecraft (dark theme by default). Inspired by Project Inception. / Um tablet que acessa um Minecraft dentro do Minecraft.",
   "authors": [
     "Voce"
@@ -28,5 +28,6 @@
       "config": "tablet_inception.mixins.json",
       "environment": "client"
     }
-  ]
+  ],
+  "icon": "assets/tablet_inception/icon.png"
 }
