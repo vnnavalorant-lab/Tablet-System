@@ -2,8 +2,9 @@ package com.example.tabletinception.client;
 
 import com.example.tabletinception.TabletInceptionMod;
 import com.example.tabletinception.client.child.ChildAgent;
+import com.example.tabletinception.client.ipad.IpadItemRenderer;
+import com.example.tabletinception.client.ipad.TabletClientState;
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.MinecraftClient;
 
 public class TabletInceptionClient implements ClientModInitializer {
     @Override
@@ -13,6 +14,9 @@ public class TabletInceptionClient implements ClientModInitializer {
             ChildAgent.init();
             return;
         }
-        TabletInceptionMod.screenOpener = () -> MinecraftClient.getInstance().setScreen(new TabletScreen());
+        TabletClientState.init();
+        IpadItemRenderer.init();
+        // clique direito: toca a animacao "play" do iPad na mao e so depois abre a tela do tablet
+        TabletInceptionMod.screenOpener = TabletClientState::requestOpen;
     }
 }

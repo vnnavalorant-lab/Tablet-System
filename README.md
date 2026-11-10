@@ -76,3 +76,11 @@ Arquivos: `client/WeatherInfo.java` (leitura do clima e textos dos comentarios),
 - O app **Crafting** foi removido; a **Musica** ocupa o lugar dele. Os icones `music_icon.png` e `app_store_icon.png` (20x20) ficam em `textures/gui/`.
 - **Relogio**: cartao com horas e minutos grandes (os dois pontos piscam), segundos menores e uma barra de segundos.
 - **Cores do tablet** (Ajustes > Cores): o painel superior (barra de status) e o painel lateral (botoes) agora sao desenhados por codigo na cor escolhida; `tablet_border.png` ficou so com a moldura e os icones.
+
+## iPad 3D (v0.4)
+
+- O item "tablet" agora e o modelo `ipad.bbmodel` (textura `textures/entity/ipad.png`, dados em `assets/tablet_inception/ipad_model.json`).
+- Segurado de lado, com as duas maos nas laterais (1a e 3a pessoa). Ajuste fino: constantes em `client/ipad/IpadPose.java`.
+- Animacoes: `off`, `on`, `play` (ao ligar, 0,5 s antes de abrir a tela) e `switch_off` (ao fechar a tela).
+- Outros jogadores veem a mao direita arrastando na tela quando voce mexe o cursor.
+- Brilho: bloco `minecraft:light` invisivel (nivel em `server/TabletServer.LIGHT_LEVEL`) so enquanto o iPad esta ligado.

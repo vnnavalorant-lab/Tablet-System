@@ -3,6 +3,7 @@ package com.example.tabletinception.client;
 import com.example.tabletinception.TabletConfig;
 import com.example.tabletinception.TabletInceptionMod;
 import com.example.tabletinception.channel.Channel;
+import com.example.tabletinception.client.ipad.TabletClientState;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -1292,8 +1293,23 @@ public class TabletScreen extends Screen {
         ch.sendInput(Channel.IN_MOUSE_POS, 0, 0, 0, 0, x, y);
     }
 
+    /** Informa ao iPad (3D) onde esta o cursor na tela, para os outros jogadores verem a mao arrastando. */
+    private void reportCursor(double mx, double my) {
+        if (cursorDisabled) {
+            TabletClientState.onCursor(0.5f, 0.5f, false);
+            return;
+        }
+        double px = panelX(mx);
+        double py = panelY(my);
+        boolean inside = px >= SCREEN_X && px <= SCREEN_X + SCREEN_W && py >= SCREEN_Y && py <= SCREEN_Y + SCREEN_H;
+        float nx = (float) Math.max(0, Math.min(1, (px - SCREEN_X) / SCREEN_W));
+        float ny = (float) Math.max(0, Math.min(1, (py - SCREEN_Y) / SCREEN_H));
+        TabletClientState.onCursor(nx, ny, inside);
+    }
+
     @Override
     public void mouseMoved(double mx, double my) {
+        reportCursor(mx, my);
         if (!forwarding()) {
             lastValid = false;
             return;
@@ -1403,6 +1419,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dX, double dY) {
+        reportCursor(mx, my);
         return forwarding() || super.mouseDragged(mx, my, button, dX, dY);
     }
 
@@ -1579,6 +1596,7 @@ public class TabletScreen extends Screen {
 
     @Override
     public void removed() {
+        TabletClientState.onScreenClosed();
         Notes.save();
         uncapture();
         destroyTexture();

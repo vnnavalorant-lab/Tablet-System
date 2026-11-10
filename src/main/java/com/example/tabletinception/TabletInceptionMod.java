@@ -1,6 +1,7 @@
 package com.example.tabletinception;
 
 import com.example.tabletinception.item.TabletItem;
+import com.example.tabletinception.server.TabletServer;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
@@ -28,6 +29,7 @@ public class TabletInceptionMod implements ModInitializer {
     public void onInitialize() {
         Registry.register(Registries.ITEM, new Identifier(MOD_ID, "tablet"), TABLET);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS).register(entries -> entries.add(TABLET));
+        TabletServer.init();
         LOGGER.info("Tablet Inception carregado.");
     }
 }

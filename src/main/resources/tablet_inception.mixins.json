@@ -5,7 +5,10 @@
   "compatibilityLevel": "JAVA_17",
   "client": [
     "KeyboardInvoker",
+    "MixinHeldItemFeatureRenderer",
+    "MixinHeldItemRenderer",
     "MixinMinecraftClient",
+    "MixinPlayerEntityModel",
     "MixinWindow",
     "MouseInvoker"
   ],
