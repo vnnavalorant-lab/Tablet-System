@@ -15,7 +15,7 @@
 
 ## Apps
 - **ScuteAI**: simple keyword-based chat assistant (math like `2+2`, time, date, jokes, Minecraft tips). Replies follow the game language; edit `RULES_EN` / `RULES_PT` in `client/ScuteAi.java` to add answers.
-- **Clock**, **Music** (Minecraft music discs), **Notes** (auto-saved to `config/tablet_inception/notes.txt`), **Weather** (reads the real in-game weather, with an animated scene and comments).
+- **Clock**, **Music** (two tracks: Campfire Tales and Echoes Below), **Notes** (auto-saved to `config/tablet_inception/notes.txt`), **Weather** (reads the real in-game weather, with an animated scene and comments).
 - **Camera**, **Gallery**, **Books** and **App Store** show "App under development ;(".
 - **Settings**: wallpaper (pick or drag an image onto the tablet) and colors of the top/side panels (the default is dark).
 

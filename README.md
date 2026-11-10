@@ -73,7 +73,7 @@ Arquivos: `client/WeatherInfo.java` (leitura do clima e textos dos comentarios),
 ## Apps simples (Notas, Relogio, Musica e os "em desenvolvimento")
 - **Notas**: area de texto para o jogador anotar. Digite, **Enter** quebra a linha, **Backspace** apaga, **Ctrl+V** cola, roda do mouse / setas rolam. Salva sozinho em `config/tablet_inception/notes.txt` (limite de 4000 caracteres).
 - **Relogio**: mostra apenas a hora atual (HH:mm:ss) em letras grandes.
-- **Musica**: lista com as musicas do Minecraft (os discos: 13, Cat, Blocks, Chirp, Far, Mall, Mellohi, Stal, Strad, Ward, 11, Wait, Otherside, 5, Pigstep, Relic). Clique em uma para tocar; clicar de novo nela (ou em **Parar**, ou no quadrado de navegacao) para a musica. Se fechar o tablet a musica continua tocando. Para mudar a lista, edite `TRACKS` em `client/MusicPlayer.java`.
+- **Musica**: lista com duas faixas do mod: **Campfire Tales** e **Echoes Below** (arquivos em `assets/tablet_inception/sounds/`, declarados em `sounds.json`). Clique em uma para tocar; clicar de novo nela (ou em **Parar**, ou no quadrado de navegacao) para a musica. Se fechar o tablet a musica continua tocando. Para trocar as faixas, coloque outro `.ogg` em `sounds/`, declare em `sounds.json` e edite `TRACKS` em `client/MusicPlayer.java`.
 - **Camera**, **Galeria**, **Livros** e **App Store**: mostram "Aplicativo em Desenvolvimento ;(".
 - O app **Crafting** foi removido; a **Musica** ocupa o lugar dele. Os icones `music_icon.png` e `app_store_icon.png` (20x20) ficam em `textures/gui/`.
 - **Relogio**: cartao com horas e minutos grandes (os dois pontos piscam), segundos menores e uma barra de segundos.

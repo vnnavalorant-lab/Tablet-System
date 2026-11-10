@@ -1,0 +1,10 @@
+{
+  "campfire_tales": {
+    "category": "music",
+    "sounds": [ { "name": "tablet_inception:campfire_tales", "stream": true } ]
+  },
+  "echoes_below": {
+    "category": "music",
+    "sounds": [ { "name": "tablet_inception:echoes_below", "stream": true } ]
+  }
+}
