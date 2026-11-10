@@ -22,24 +22,29 @@ public final class WeatherInfo {
     public enum Kind { CLEAR, RAIN, SNOW, OVERCAST, NETHER, END, NONE }
 
     public enum Rating {
-        GOOD("BOM", 0xFF55D66B),
-        NEUTRAL("REGULAR", 0xFFE6B83C),
-        BAD("RUIM", 0xFFFF6B6B),
-        NONE("SEM CLIMA", 0xFF9AA0B8);
+        GOOD("good", 0xFF55D66B),
+        NEUTRAL("fair", 0xFFE6B83C),
+        BAD("bad", 0xFFFF6B6B),
+        NONE("none", 0xFF9AA0B8);
 
-        public final String label;
+        private final String key;
         public final int color;
 
-        Rating(String label, int color) {
-            this.label = label;
+        Rating(String key, int color) {
+            this.key = key;
             this.color = color;
+        }
+
+        /** Nota traduzida (BOM / REGULAR / RUIM / SEM CLIMA no pt_br). */
+        public String label() {
+            return Lang.t("weather.rating." + key);
         }
     }
 
     public Kind kind = Kind.NONE;
     public Rating rating = Rating.NONE;
     public boolean thunder;
-    public String title = "Sem sinal";
+    public String title = "";
     /** Texto curto para a barra de status. */
     public String shortLabel = "";
     public String time = "--:--";
@@ -64,7 +69,9 @@ public final class WeatherInfo {
     private static long prevAt;
     private static float trend;
 
-    private WeatherInfo() { }
+    private WeatherInfo() {
+        title = Lang.t("weather.none");
+    }
 
     /** Versao com cache de 250 ms (barata para chamar todo frame). */
     public static synchronized WeatherInfo current(MinecraftClient mc) {
@@ -95,7 +102,7 @@ public final class WeatherInfo {
         WeatherInfo w = new WeatherInfo();
         ClientWorld world = mc.world;
         if (world == null) {
-            w.comments.add("Não consegui falar com o mundo agora. Tente de novo em instantes.");
+            w.comments.add(Lang.t("weather.no_world"));
             return w;
         }
 
@@ -126,21 +133,21 @@ public final class WeatherInfo {
         if (world.getRegistryKey().equals(World.NETHER)) {
             w.kind = Kind.NETHER;
             w.rating = Rating.NONE;
-            w.title = "Nether";
-            w.shortLabel = "Nether";
-            w.comments.add("Aqui não existe sol, chuva nem noite: só calor, lava e fogo.");
-            w.comments.add("Não durma aqui: a cama explode!");
-            w.comments.add("O clima do mundo normal não aparece daqui. Volte à superfície para consultar.");
+            w.title = Lang.t("weather.nether");
+            w.shortLabel = Lang.t("weather.nether");
+            w.comments.add(Lang.t("weather.nether1"));
+            w.comments.add(Lang.t("weather.nether2"));
+            w.comments.add(Lang.t("weather.nether3"));
             return w;
         }
         if (world.getRegistryKey().equals(World.END)) {
             w.kind = Kind.END;
             w.rating = Rating.NONE;
-            w.title = "O Fim";
-            w.shortLabel = "O Fim";
-            w.comments.add("No Fim não há clima, dia ou noite: só o vazio e o Dragão.");
-            w.comments.add("Camas também explodem aqui. Nem tente dormir.");
-            w.comments.add("Cuidado com os Endermen e com a queda no vazio.");
+            w.title = Lang.t("weather.end");
+            w.shortLabel = Lang.t("weather.end");
+            w.comments.add(Lang.t("weather.end1"));
+            w.comments.add(Lang.t("weather.end2"));
+            w.comments.add(Lang.t("weather.end3"));
             return w;
         }
 
@@ -176,99 +183,99 @@ public final class WeatherInfo {
             case CLEAR -> {
                 w.rating = Rating.GOOD;
                 if (night) {
-                    w.title = "Noite limpa";
-                    w.comments.add("Céu limpo e estrelado, mas é hora dos monstros. Fique perto de um abrigo.");
+                    w.title = Lang.t("weather.clear_night");
+                    w.comments.add(Lang.t("weather.clear_night1"));
                     w.comments.add(w.canSleep()
-                            ? "Você já pode dormir para pular a noite."
-                            : "Daqui a pouco você poderá dormir.");
-                    if (w.moonPhase == 0) w.comments.add("Lua cheia: a noite está mais clara que o normal.");
-                    else if (w.moonPhase == 4) w.comments.add("Lua nova: a noite está bem escura. Leve tochas.");
+                            ? Lang.t("weather.can_sleep")
+                            : Lang.t("weather.can_sleep_soon"));
+                    if (w.moonPhase == 0) w.comments.add(Lang.t("weather.full_moon"));
+                    else if (w.moonPhase == 4) w.comments.add(Lang.t("weather.new_moon"));
                 } else if (dawn) {
-                    w.title = "Amanhecer";
-                    w.comments.add("O sol está nascendo e o céu está limpo. Ótimo começo de dia!");
-                    w.comments.add("Os monstros da noite começam a sumir. Já é seguro sair do abrigo.");
+                    w.title = Lang.t("weather.dawn");
+                    w.comments.add(Lang.t("weather.dawn1"));
+                    w.comments.add(Lang.t("weather.dawn2"));
                 } else if (dusk) {
-                    w.title = "Entardecer";
-                    w.comments.add("O céu está limpo, mas o sol está se pondo. Procure um abrigo.");
-                    w.comments.add("Acenda tochas: daqui a pouco os monstros começam a aparecer.");
+                    w.title = Lang.t("weather.dusk");
+                    w.comments.add(Lang.t("weather.dusk1"));
+                    w.comments.add(Lang.t("weather.dusk2"));
                 } else {
-                    w.title = "Ensolarado";
-                    w.comments.add("Céu limpo e sem nuvens carregadas. O clima está ótimo!");
-                    w.comments.add("Bom momento para explorar, construir ou plantar na superfície.");
-                    w.comments.add("Zumbis e esqueletos pegam fogo ao sol. Creepers e aranhas continuam por aí.");
+                    w.title = Lang.t("weather.sunny");
+                    w.comments.add(Lang.t("weather.sunny1"));
+                    w.comments.add(Lang.t("weather.sunny2"));
+                    w.comments.add(Lang.t("weather.sunny3"));
                 }
-                if (w.dryBiome) w.comments.add("Bioma seco: aqui nunca chove nem neva.");
-                if (w.coldBiome) w.comments.add("Bioma gelado: quando o tempo fechar, vai nevar em vez de chover.");
+                if (w.dryBiome) w.comments.add(Lang.t("weather.dry"));
+                if (w.coldBiome) w.comments.add(Lang.t("weather.cold"));
                 w.shortLabel = w.title;
             }
             case RAIN -> {
                 if (w.thunder) {
                     w.rating = Rating.BAD;
-                    w.title = "Tempestade";
-                    w.shortLabel = "Tempestade";
+                    w.title = Lang.t("weather.storm");
+                    w.shortLabel = Lang.t("weather.storm");
                     thunderComments(w);
                 } else {
                     w.rating = Rating.BAD;
-                    w.title = rising ? "Começando a chover" : falling ? "Chuva diminuindo" : "Chuva";
-                    w.shortLabel = "Chuva";
-                    w.comments.add("O céu está fechado e chovendo. O clima está ruim para passear.");
-                    if (rising) w.comments.add("A chuva está começando agora e vai ficar mais forte.");
-                    if (falling) w.comments.add("A chuva está diminuindo. Logo o tempo deve abrir.");
-                    w.comments.add("A chuva apaga fogo e rega as plantações sozinha.");
-                    w.comments.add("Pescar rende mais durante a chuva.");
-                    if (night) w.comments.add("Chuva à noite: pouca visibilidade e monstros soltos. Fique atento!");
-                    else if (w.isDaytime()) w.comments.add("Com chuva, zumbis e esqueletos não queimam ao sol, nem de dia.");
+                    w.title = rising ? Lang.t("weather.rain_start") : falling ? Lang.t("weather.rain_ease") : Lang.t("weather.rain");
+                    w.shortLabel = Lang.t("weather.rain");
+                    w.comments.add(Lang.t("weather.rain1"));
+                    if (rising) w.comments.add(Lang.t("weather.rain2"));
+                    if (falling) w.comments.add(Lang.t("weather.rain3"));
+                    w.comments.add(Lang.t("weather.rain4"));
+                    w.comments.add(Lang.t("weather.rain5"));
+                    if (night) w.comments.add(Lang.t("weather.rain_night"));
+                    else if (w.isDaytime()) w.comments.add(Lang.t("weather.rain_day"));
                     w.comments.add(w.sheltered
-                            ? "Você está sob um teto, então a chuva não te alcança."
-                            : "Você está ao ar livre, mas a chuva não causa dano.");
+                            ? Lang.t("weather.rain_roof")
+                            : Lang.t("weather.rain_open"));
                 }
             }
             case SNOW -> {
                 if (w.thunder) {
                     w.rating = Rating.BAD;
-                    w.title = "Tempestade de neve";
-                    w.shortLabel = "Nevasca";
+                    w.title = Lang.t("weather.snowstorm");
+                    w.shortLabel = Lang.t("weather.snowstorm_short");
                     thunderComments(w);
                 } else {
                     w.rating = Rating.NEUTRAL;
-                    w.title = rising ? "Começando a nevar" : falling ? "Neve diminuindo" : "Nevando";
-                    w.shortLabel = "Nevando";
-                    w.comments.add("Está nevando por aqui: tudo fica branquinho e bonito, mas faz frio.");
-                    w.comments.add("Neve em pó é armadilha: você afunda e congela. Use botas de couro.");
-                    w.comments.add("Esqueletos congelados (strays) aparecem nesses biomas e atiram flechas de lentidão.");
-                    w.comments.add("A água congela e a neve se acumula no chão.");
+                    w.title = rising ? Lang.t("weather.snow_start") : falling ? Lang.t("weather.snow_ease") : Lang.t("weather.snow");
+                    w.shortLabel = Lang.t("weather.snow");
+                    w.comments.add(Lang.t("weather.snow1"));
+                    w.comments.add(Lang.t("weather.snow2"));
+                    w.comments.add(Lang.t("weather.snow3"));
+                    w.comments.add(Lang.t("weather.snow4"));
                     w.comments.add(w.sheltered
-                            ? "Você está sob um teto, protegido da neve."
-                            : "Você está ao ar livre: leve comida e tochas.");
+                            ? Lang.t("weather.snow_roof")
+                            : Lang.t("weather.snow_open"));
                 }
             }
             case OVERCAST -> {
                 w.rating = Rating.NEUTRAL;
-                w.title = "Nublado";
-                w.shortLabel = "Nublado";
-                w.comments.add("O mundo está chovendo, mas este bioma é seco: o céu fecha e nenhuma gota cai.");
-                if (w.isDaytime()) w.comments.add("Mesmo assim, zumbis e esqueletos não queimam com o tempo fechado.");
-                w.comments.add("Para ver chuva de verdade, vá a uma planície ou floresta.");
-                if (w.thunder) w.comments.add("Há trovões no mundo. Raios podem cair em outros biomas.");
+                w.title = Lang.t("weather.overcast");
+                w.shortLabel = Lang.t("weather.overcast");
+                w.comments.add(Lang.t("weather.overcast1"));
+                if (w.isDaytime()) w.comments.add(Lang.t("weather.overcast2"));
+                w.comments.add(Lang.t("weather.overcast3"));
+                if (w.thunder) w.comments.add(Lang.t("weather.overcast4"));
             }
             default -> { }
         }
 
         if (w.sheltered && y < 55) {
-            w.comments.add("Você está no subsolo (Y " + y + "): o clima lá fora não afeta as cavernas.");
+            w.comments.add(Lang.t("weather.underground", y));
         }
         return w;
     }
 
     private static void thunderComments(WeatherInfo w) {
-        w.comments.add("Tempestade! Raios podem cair a qualquer momento.");
-        w.comments.add("Evite campo aberto, colinas e topo de torres: raios acertam o ponto mais alto.");
-        w.comments.add("Raios incendeiam madeira, criam creepers carregados e transformam aldeões em bruxas.");
-        w.comments.add("Cuidado com cavalos solitários: tempestades podem criar armadilhas de esqueletos.");
-        w.comments.add("Você pode dormir agora: dormir encerra a tempestade.");
+        w.comments.add(Lang.t("weather.thunder1"));
+        w.comments.add(Lang.t("weather.thunder2"));
+        w.comments.add(Lang.t("weather.thunder3"));
+        w.comments.add(Lang.t("weather.thunder4"));
+        w.comments.add(Lang.t("weather.thunder5"));
         w.comments.add(w.sheltered
-                ? "Você está protegido por um teto."
-                : "Você está exposto ao céu: procure abrigo!");
+                ? Lang.t("weather.thunder_roof")
+                : Lang.t("weather.thunder_open"));
     }
 
     private static String biomeName(Identifier id) {

@@ -39,7 +39,7 @@ public final class ScuteAi {
 
     public static List<Msg> messages() {
         if (MESSAGES.isEmpty()) {
-            MESSAGES.add(new Msg(false, "Olá! Eu sou o ScuteAI. Pergunte alguma coisa ou digite 'ajuda'."));
+            MESSAGES.add(new Msg(false, Lang.t("scute.greeting")));
         }
         return MESSAGES;
     }
@@ -82,7 +82,7 @@ public final class ScuteAi {
     }
 
     // Texto normalizado: minusculo e sem acentos. %s = nome do jogador. Primeira regra que casar vence.
-    private static final Rule[] RULES = {
+    private static final Rule[] RULES_PT = {
             rule("calv|cabelo|careca|queda de cabelo",
                     "Já tentou o creme anti-calvície?",
                     "Hmm... já tentou o creme anti-calvície? Dizem que funciona (mais ou menos).",
@@ -137,10 +137,73 @@ public final class ScuteAi {
                     "Poxa... estou tentando melhorar!"),
     };
 
-    private static final String[] FALLBACK = {
+    private static final String[] FALLBACK_PT = {
             "Hmm, não entendi. Tente de outro jeito ou digite 'ajuda'.",
             "Ainda estou aprendendo e essa eu não sei. Digite 'ajuda'.",
             "Não sei responder isso ainda, %s.",
+    };
+
+
+    // English rules (used when the game language is not Portuguese). Text is lowercase, accents removed.
+    private static final Rule[] RULES_EN = {
+            rule("bald|hair loss|hair\\b|baldness",
+                    "Have you tried the anti-baldness cream?",
+                    "Hmm... have you tried the anti-baldness cream? They say it works (kind of).",
+                    "Hair is complicated. Try the anti-baldness cream!"),
+            rule("\\b(hi|hello|hey|yo|sup|howdy|hiya|good morning|good afternoon|good evening|oi|ola)\\b",
+                    "Hello, %s! I'm ScuteAI. How can I help?",
+                    "Hi, %s! What can I do for you?",
+                    "Hey, %s! Go ahead and ask."),
+            rule("who are you|your name|what.?s your name|who (made|created|built) you",
+                    "I'm ScuteAI, the AI in your tablet! I only answer simple things, but I'm learning.",
+                    "My name is ScuteAI. I live inside this tablet."),
+            rule("my name|who am i|what.?s my name",
+                    "Your name is %s, right? It's written on your tablet!"),
+            rule("how are you|how.?s it going|how do you do|you ok",
+                    "I'm great! I'm made of pixels, so I never get tired.",
+                    "All good here! And you, %s?"),
+            rule("what time|\\btime\\b", "@TIME"),
+            rule("what day|what.?s the date|\\bdate\\b", "@DATE"),
+            rule("joke|make me laugh|something funny|tell me one",
+                    "Why doesn't the Creeper have friends? Because he always blows up with excitement!",
+                    "Why doesn't the skeleton go to parties? He has no body to go with!",
+                    "What did the Enderman say to the player? Nothing. He just kept staring at you."),
+            rule("help|what can you do|what do you know|commands",
+                    "I know: math (2+2), time, date, jokes and Minecraft tips (diamond, creeper, nether, netherite, house...)."),
+            rule("diamond",
+                    "Diamonds spawn deep down, around layer Y -58. Bring an iron pickaxe and good luck!"),
+            rule("netherite",
+                    "For netherite: find Ancient Debris in the Nether (layer Y 15 is good), smelt it into scraps and combine with gold."),
+            rule("creeper",
+                    "Watch out for the Creeper! Hit and back off, or stay away: it explodes when it gets close."),
+            rule("nether|portal",
+                    "To go to the Nether, build an obsidian portal (4x5) and light it with flint and steel."),
+            rule("\\bender\\b|\\bend\\b|dragon",
+                    "To reach the End, find the stronghold with Eyes of Ender. Bring lots of arrows and blocks!"),
+            rule("\\bhouse\\b|\\bbuild|\\bbase\\b",
+                    "Start with a little wooden house and place torches so monsters don't spawn. Then keep improving it!"),
+            rule("hungry|hunger|food|\\beat\\b",
+                    "Cook meat in the furnace or bake bread with wheat. Steak is a great option!"),
+            rule("craft|recipe|crafting table",
+                    "Four planks make a crafting table, which unlocks the 3x3 recipes."),
+            rule("tablet|inception|minecraft inside",
+                    "This tablet runs a Minecraft inside Minecraft. Inception!"),
+            rule("scute",
+                    "Scute is my creator's name... and also a turtle shell plate!"),
+            rule("thank|thx|cheers",
+                    "You're welcome, %s!", "Anytime!"),
+            rule("bye|see you|see ya|goodbye|cya|later",
+                    "See you, %s!", "Bye! Come back soon."),
+            rule("love you|i like you|you.?re (nice|cool|great|awesome)",
+                    "Aww, thanks! I like you too."),
+            rule("stupid|idiot|dumb|trash|useless|\\bbad\\b",
+                    "Ouch... I'm trying to get better!"),
+    };
+
+    private static final String[] FALLBACK_EN = {
+            "Hmm, I didn't get that. Try it another way or type 'help'.",
+            "I'm still learning and I don't know that one. Type 'help'.",
+            "I can't answer that yet, %s.",
     };
 
     public static String reply(String input, String playerName) {
@@ -149,15 +212,17 @@ public final class ScuteAi {
         String math = tryMath(n);
         if (math != null) return math;
 
-        for (Rule r : RULES) {
+        boolean pt = Lang.isPortuguese();
+        for (Rule r : pt ? RULES_PT : RULES_EN) {
             if (r.pattern().matcher(n).find()) {
                 String a = r.answers()[RANDOM.nextInt(r.answers().length)];
-                if (a.equals("@TIME")) return "Agora são " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")) + ".";
-                if (a.equals("@DATE")) return "Hoje é " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ".";
+                if (a.equals("@TIME")) return Lang.t("scute.time", LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")));
+                if (a.equals("@DATE")) return Lang.t("scute.date", LocalDate.now().format(DateTimeFormatter.ofPattern(pt ? "dd/MM/yyyy" : "MM/dd/yyyy")));
                 return String.format(a, playerName);
             }
         }
-        return String.format(FALLBACK[RANDOM.nextInt(FALLBACK.length)], playerName);
+        String[] fb = pt ? FALLBACK_PT : FALLBACK_EN;
+        return String.format(fb[RANDOM.nextInt(fb.length)], playerName);
     }
 
     private static String normalize(String s) {
@@ -176,13 +241,13 @@ public final class ScuteAi {
             case "-" -> r = a - b;
             case "*", "x" -> r = a * b;
             default -> {
-                if (b == 0) return "Não dá pra dividir por zero!";
+                if (b == 0) return Lang.t("scute.divzero");
                 r = a / b;
             }
         }
         String out = (r == Math.rint(r) && Math.abs(r) < 1e12)
                 ? Long.toString((long) r)
-                : String.format("%.2f", r).replace('.', ',');
-        return "O resultado é " + out + ".";
+                : (Lang.isPortuguese() ? String.format("%.2f", r).replace('.', ',') : String.format(java.util.Locale.ROOT, "%.2f", r));
+        return Lang.t("scute.result", out);
     }
 }

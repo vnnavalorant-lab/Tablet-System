@@ -1,5 +1,7 @@
 # Tablet Inception (Fabric 1.20.1)
 
+> English version: [README.en.md](README.en.md)
+
 Item **Tablet**: clique direito abre uma tela que mostra e controla um Minecraft rodando em outro processo.
 
 ## Compilar pelo GitHub
@@ -84,3 +86,8 @@ Arquivos: `client/WeatherInfo.java` (leitura do clima e textos dos comentarios),
 - Animacoes: `off`, `on`, `play` (ao ligar, 0,5 s antes de abrir a tela) e `switch_off` (ao fechar a tela).
 - Outros jogadores veem a mao direita arrastando na tela quando voce mexe o cursor.
 - Brilho: bloco `minecraft:light` invisivel (nivel em `server/TabletServer.LIGHT_LEVEL`) so enquanto o iPad esta ligado.
+
+
+## Idiomas e tema escuro (v0.5)
+- O mod tem traducao para **ingles (en_us)** e **portugues (pt_br)** em `assets/tablet_inception/lang/`. Todos os textos da tela, do Clima, da Musica e do ScuteAI seguem o idioma escolhido no jogo; idiomas sem traducao usam o ingles. O codigo busca os textos por `Lang.t("chave")` (`client/Lang.java`). O ScuteAI tem um conjunto de respostas em cada idioma (`RULES_PT` e `RULES_EN` em `client/ScuteAi.java`).
+- O tablet agora usa o **tema escuro como padrao**: a textura `tablet_panel.png`, o fundo dos apps, botoes, chat, notas, relogio e lista de musicas usam tons de cinza escuro. As cores do painel superior/lateral continuam personalizaveis em Ajustes > Cores (o padrao agora e escuro).

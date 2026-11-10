@@ -3,7 +3,7 @@
   "id": "tablet_inception",
   "version": "${version}",
   "name": "Tablet Inception",
-  "description": "Um tablet que acessa um Minecraft dentro do Minecraft. Inspirado no Project Inception.",
+  "description": "A tablet that runs a Minecraft inside Minecraft (dark theme by default). Inspired by Project Inception. / Um tablet que acessa um Minecraft dentro do Minecraft.",
   "authors": [
     "Voce"
   ],

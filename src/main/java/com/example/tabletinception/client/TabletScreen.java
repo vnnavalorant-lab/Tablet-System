@@ -73,9 +73,13 @@ public class TabletScreen extends Screen {
     private static final Identifier[] APP_ICONS = {ICON, ICON_CAMERA, ICON_GALLERY, ICON_SCUTE,
             ICON_CLOCK, ICON_MUSIC, ICON_NOTES, ICON_BOOKS, ICON_SETTINGS, ICON_WEATHER,
             ICON_STORE};
-    private static final String[] APP_NAMES = {"Minecraft", "Camera", "Galeria", "ScuteAI",
-            "Rel\u00f3gio", "M\u00fasica", "Notas", "Livros", "Ajustes", "Clima",
-            "App Store"};
+    private static final String[] APP_NAMES = {"app.minecraft", "app.camera", "app.gallery", "app.scute",
+            "app.clock", "app.music", "app.notes", "app.books", "app.settings", "app.weather",
+            "app.store"};   // chaves de traducao (use appName(i))
+
+    private static String appName(int i) {
+        return Lang.t(APP_NAMES[i]);
+    }
     private static final int APP_GAP = 4;        // espaco entre as celulas dos apps
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -105,8 +109,8 @@ public class TabletScreen extends Screen {
     private static final int CHAT_BOTTOM = SCREEN_Y + SCREEN_H - CHAT_INPUT_H;
     private static final int HEAD = 11;                    // tamanho do rosto ao lado das mensagens
     private static final int BUBBLE_MAX_W = 140;
-    private static final int COLOR_BG = 0xFF0A1250;
-    private static final int COLOR_LINE = 0xFF4A5590;
+    private static final int COLOR_BG = 0xFF121214;
+    private static final int COLOR_LINE = 0xFF3C3C46;
     // Notas / Musica (pixels do painel)
     private static final int NOTES_X1 = CHAT_X1;
     private static final int NOTES_X2 = CHAT_X2;
@@ -176,12 +180,16 @@ public class TabletScreen extends Screen {
     private static final int SW_X = CHAT_X1 + 4;
     private static final int SW_TOP_Y = CHAT_TOP + 28;
     private static final int SW_SIDE_Y = SW_TOP_Y + 40;
-    private static final String[] TAB_NAMES = {"Papel de parede", "Cores"};
+    private static final String[] TAB_NAMES = {"tab.wallpaper", "tab.colors"};   // chaves de traducao
+
+    private static String tabName(int i) {
+        return Lang.t(TAB_NAMES[i]);
+    }
     private int settingsTab;
     private volatile Path pendingPick;
     private volatile boolean picking;
     private String settingsMsg = "";
-    private int settingsMsgColor = 0xFFA0A8D0;
+    private int settingsMsgColor = 0xFF9A9AA8;
     private String chatInput = "";
 
     private boolean captured;
@@ -193,7 +201,7 @@ public class TabletScreen extends Screen {
     private final Set<Integer> pressedButtons = new HashSet<>();
 
     public TabletScreen() {
-        super(Text.literal("Tablet"));
+        super(Text.translatable("screen.tablet_inception.tablet"));
     }
 
     @Override
@@ -259,8 +267,8 @@ public class TabletScreen extends Screen {
 
         double kl = fontK(labelN());
         int labelW = 0;
-        for (String name : APP_NAMES) {
-            labelW = Math.max(labelW, (int) Math.ceil(this.textRenderer.getWidth(name) * kl));
+        for (int ai = 0; ai < APP_NAMES.length; ai++) {
+            labelW = Math.max(labelW, (int) Math.ceil(this.textRenderer.getWidth(appName(ai)) * kl));
         }
         cellW = Math.max(ICON_SIZE + 8, labelW + 6);
         cellH = 2 + ICON_SIZE + 2 + (int) Math.ceil(8 * kl) + 3;
@@ -377,21 +385,21 @@ public class TabletScreen extends Screen {
         int hintY = (int) (oy + PANEL_H * sf + 6);
         if (hintY + 9 <= this.height) {
             String hint = view == View.APP
-                    ? (captured ? "Ctrl direito: soltar mouse e teclado"
-                                : "Clique na tela para controlar  |  Esc: fechar o tablet")
+                    ? (captured ? Lang.t("hint.release")
+                                : Lang.t("hint.app"))
                     : view == View.SCUTE
-                    ? "Digite e aperte Enter  |  Roda do mouse: rolar  |  Esc: voltar"
+                    ? Lang.t("hint.scute")
                     : view == View.SETTINGS
-                    ? "Escolha as opcoes com o mouse  |  Esc: voltar"
+                    ? Lang.t("hint.settings")
                     : view == View.WEATHER
-                    ? "Roda do mouse: rolar os comentarios  |  Esc: voltar"
+                    ? Lang.t("hint.weather")
                     : view == View.NOTES
-                    ? "Digite para anotar (salva sozinho)  |  Ctrl+V: colar  |  Esc: voltar"
+                    ? Lang.t("hint.notes")
                     : view == View.MUSIC
-                    ? "Clique em uma musica para tocar  |  Roda do mouse: rolar  |  Esc: voltar"
+                    ? Lang.t("hint.music")
                     : view == View.CLOCK || view == View.DEV
-                    ? "Esc: voltar"
-                    : "Toque em um app para abrir  |  Esc: fechar o tablet";
+                    ? Lang.t("hint.back")
+                    : Lang.t("hint.home");
             ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal(hint), this.width / 2, hintY, 0xA0A0A0);
         }
 
@@ -446,11 +454,11 @@ public class TabletScreen extends Screen {
             if (i == APP_WEATHER && this.client.world != null) {
                 int dotX = iconX + ICON_SIZE - 5;
                 int dotY = cellY + 1;
-                ctx.fill(dotX - 1, dotY - 1, dotX + 5, dotY + 5, 0xFF0A1250);
+                ctx.fill(dotX - 1, dotY - 1, dotX + 5, dotY + 5, 0xFF121214);
                 ctx.fill(dotX, dotY, dotX + 4, dotY + 4, WeatherInfo.current(this.client).rating.color);
             }
 
-            drawTextCentered(ctx, Text.literal(APP_NAMES[i]).asOrderedText(),
+            drawTextCentered(ctx, Text.literal(appName(i)).asOrderedText(),
                     x + cellW / 2.0, cellY + 2 + ICON_SIZE + 2, kl, 0xFFFFFFFF);
 
             // Indicador de app em execucao (so o Minecraft roda de verdade por enquanto)
@@ -488,15 +496,15 @@ public class TabletScreen extends Screen {
     }
 
     private void drawButton(DrawContext ctx, int x, int y, int w, int h, String label, boolean hover, boolean enabled) {
-        int fill = !enabled ? 0xFF222850 : hover ? 0xFF5260B0 : 0xFF3B4A78;
-        drawBubbleBox(ctx, x, y, w, h, fill, enabled ? 0xFF8FA0CC : COLOR_LINE);
+        int fill = !enabled ? 0xFF202024 : hover ? 0xFF4A4A56 : 0xFF32323A;
+        drawBubbleBox(ctx, x, y, w, h, fill, enabled ? 0xFF7A7A88 : COLOR_LINE);
         double k = chatK();
         drawTextCentered(ctx, Text.literal(label).asOrderedText(), x + w / 2.0,
-                y + (h - 8 * k) / 2.0 + k / 2.0, k, enabled ? 0xFFFFFFFF : 0xFF707AA8);
+                y + (h - 8 * k) / 2.0 + k / 2.0, k, enabled ? 0xFFFFFFFF : 0xFF6C6C78);
     }
 
-    private static final int DEFAULT_TOP = 0x261833;    // cores padrao das barras
-    private static final int DEFAULT_SIDE = 0x40225B;
+    private static final int DEFAULT_TOP = 0x0C0C0F;    // cores padrao das barras
+    private static final int DEFAULT_SIDE = 0x1E1E24;
 
     /**
      * Desenha o painel superior (barra de status) e o painel lateral (navegacao) na cor escolhida em
@@ -523,13 +531,13 @@ public class TabletScreen extends Screen {
         double k = chatK();
         int x = CHAT_X1 + 4;
         for (int j = 0; j < i; j++) {
-            x += (int) Math.ceil(this.textRenderer.getWidth(TAB_NAMES[j]) * k) + 10 + 3;
+            x += (int) Math.ceil(this.textRenderer.getWidth(tabName(j)) * k) + 10 + 3;
         }
         return x;
     }
 
     private int tabW(int i) {
-        return (int) Math.ceil(this.textRenderer.getWidth(TAB_NAMES[i]) * chatK()) + 10;
+        return (int) Math.ceil(this.textRenderer.getWidth(tabName(i)) * chatK()) + 10;
     }
 
     private void drawSettingsTabs(DrawContext ctx, double pmx, double pmy) {
@@ -538,10 +546,10 @@ public class TabletScreen extends Screen {
             int x = tabX(i);
             int w = tabW(i);
             boolean hover = inRect(pmx, pmy, x, TAB_Y, w, TAB_H);
-            drawBubbleBox(ctx, x, TAB_Y, w, TAB_H, sel ? 0xFF5260B0 : hover ? 0xFF3B4A78 : 0xFF1B2266,
+            drawBubbleBox(ctx, x, TAB_Y, w, TAB_H, sel ? 0xFF4A4A56 : hover ? 0xFF32323A : 0xFF1C1C22,
                     sel ? 0xFFFFFFFF : COLOR_LINE);
             double k = chatK();
-            drawTextCentered(ctx, Text.literal(TAB_NAMES[i]).asOrderedText(), x + w / 2.0,
+            drawTextCentered(ctx, Text.literal(tabName(i)).asOrderedText(), x + w / 2.0,
                     TAB_Y + (TAB_H - 8 * k) / 2.0 + k / 2.0, k, 0xFFFFFFFF);
         }
     }
@@ -555,11 +563,11 @@ public class TabletScreen extends Screen {
             boolean selected = rgb == current;
             boolean hover = inRect(pmx, pmy, x, y, SW_W, SW_H);
             ctx.fill(x - 1, y - 1, x + SW_W + 1, y + SW_H + 1,
-                    selected ? 0xFFFFFFFF : hover ? 0xFFA0A8D0 : COLOR_LINE);
+                    selected ? 0xFFFFFFFF : hover ? 0xFF9A9AA8 : COLOR_LINE);
             if (rgb == 0) {
-                ctx.fill(x, y, x + SW_W, y + SW_H, 0xFF361A50);      // cor padrao do tablet
+                ctx.fill(x, y, x + SW_W, y + SW_H, 0xFF1E1E24);      // cor padrao do tablet
                 drawTextCentered(ctx, Text.literal("x").asOrderedText(), x + SW_W / 2.0,
-                        y + (SW_H - 8 * k) / 2.0 + k / 2.0, k, 0xFFA0A8D0);
+                        y + (SW_H - 8 * k) / 2.0 + k / 2.0, k, 0xFF9A9AA8);
             } else {
                 ctx.fill(x, y, x + SW_W, y + SW_H, 0xFF000000 | rgb);
             }
@@ -568,13 +576,13 @@ public class TabletScreen extends Screen {
 
     private void drawColorsTab(DrawContext ctx, double pmx, double pmy) {
         double k = chatK();
-        drawSwatchRow(ctx, "Painel superior", SW_TOP_Y, Theme.top(), pmx, pmy);
-        drawSwatchRow(ctx, "Painel lateral", SW_SIDE_Y, Theme.side(), pmx, pmy);
+        drawSwatchRow(ctx, Lang.t("settings.top_panel"), SW_TOP_Y, Theme.top(), pmx, pmy);
+        drawSwatchRow(ctx, Lang.t("settings.side_panel"), SW_SIDE_Y, Theme.side(), pmx, pmy);
         int textW = (int) ((CHAT_X2 - SW_X) / k);
         double ty = SW_SIDE_Y + SW_H + 8;
         for (OrderedText l : this.textRenderer.wrapLines(
-                Text.literal("Clique em uma cor para aplicar. O quadrado com x volta a cor padrao."), textW)) {
-            drawText(ctx, l, SW_X, ty, k, 0xFFA0A8D0);
+                Text.literal(Lang.t("settings.color_help")), textW)) {
+            drawText(ctx, l, SW_X, ty, k, 0xFF9A9AA8);
             ty += 9 * k;
         }
     }
@@ -607,8 +615,8 @@ public class TabletScreen extends Screen {
         }
         if (inRect(px, py, BTN_X, BTN_RESET_Y, BTN_W, BTN_H) && Wallpaper.has()) {
             Wallpaper.clear();
-            settingsMsg = "Papel de parede padrao restaurado.";
-            settingsMsgColor = 0xFFA0A8D0;
+            settingsMsg = Lang.t("settings.reset_done");
+            settingsMsgColor = 0xFF9A9AA8;
             return true;
         }
         return false;
@@ -620,7 +628,7 @@ public class TabletScreen extends Screen {
 
         // cabecalho
         double hk = k * 1.15;
-        drawTextCentered(ctx, Text.literal("Ajustes").asOrderedText(),
+        drawTextCentered(ctx, Text.literal(Lang.t("app.settings")).asOrderedText(),
                 (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
         ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
 
@@ -641,13 +649,13 @@ public class TabletScreen extends Screen {
 
         boolean hoverPick = inRect(pmx, pmy, BTN_X, BTN_PICK_Y, BTN_W, BTN_H);
         boolean hoverReset = inRect(pmx, pmy, BTN_X, BTN_RESET_Y, BTN_W, BTN_H);
-        drawButton(ctx, BTN_X, BTN_PICK_Y, BTN_W, BTN_H, picking ? "Escolhendo..." : "Escolher imagem", hoverPick, !picking);
-        drawButton(ctx, BTN_X, BTN_RESET_Y, BTN_W, BTN_H, "Restaurar padrao", hoverReset, Wallpaper.has());
+        drawButton(ctx, BTN_X, BTN_PICK_Y, BTN_W, BTN_H, picking ? Lang.t("settings.choosing") : Lang.t("settings.pick"), hoverPick, !picking);
+        drawButton(ctx, BTN_X, BTN_RESET_Y, BTN_W, BTN_H, Lang.t("settings.reset"), hoverReset, Wallpaper.has());
 
         // mensagem de estado / dica
         int textW = (int) ((CHAT_X2 - PREV_X) / k);
-        String msg = settingsMsg.isEmpty() ? "Dica: arraste uma imagem (png, jpg, bmp, gif) do PC para esta tela." : settingsMsg;
-        int color = settingsMsg.isEmpty() ? 0xFFA0A8D0 : settingsMsgColor;
+        String msg = settingsMsg.isEmpty() ? Lang.t("settings.tip") : settingsMsg;
+        int color = settingsMsg.isEmpty() ? 0xFF9A9AA8 : settingsMsgColor;
         double ty = PREV_Y + PREV_H + 8;
         for (OrderedText l : this.textRenderer.wrapLines(Text.literal(msg), textW)) {
             drawText(ctx, l, PREV_X, ty, k, color);
@@ -670,13 +678,13 @@ public class TabletScreen extends Screen {
                         .put(stack.UTF8("*.bmp")).put(stack.UTF8("*.gif"));
                 filters.flip();
                 String start = System.getProperty("user.home", "") + File.separator;
-                String res = TinyFileDialogs.tinyfd_openFileDialog("Escolher papel de parede", start,
-                        filters, "Imagens (png, jpg, bmp, gif)", false);
+                String res = TinyFileDialogs.tinyfd_openFileDialog(Lang.t("settings.picker_title"), start,
+                        filters, Lang.t("settings.picker_filter"), false);
                 if (res != null && !res.isEmpty()) {
                     pendingPick = Path.of(res);
                 }
             } catch (Throwable t) {
-                settingsMsg = "Seletor indisponivel. Arraste a imagem para esta tela.";
+                settingsMsg = Lang.t("settings.picker_unavailable");
                 settingsMsgColor = 0xFFFF8080;
             } finally {
                 picking = false;
@@ -698,10 +706,10 @@ public class TabletScreen extends Screen {
         pendingPick = null;
         try {
             Wallpaper.setFromFile(p);
-            settingsMsg = "Papel de parede alterado!";
+            settingsMsg = Lang.t("settings.changed");
             settingsMsgColor = 0xFF80FF90;
         } catch (Exception e) {
-            settingsMsg = "Nao foi possivel usar essa imagem: " + e.getMessage();
+            settingsMsg = Lang.t("settings.cant_use", e.getMessage());
             settingsMsgColor = 0xFFFF8080;
         }
     }
@@ -731,7 +739,7 @@ public class TabletScreen extends Screen {
     }
 
     private String playerName() {
-        return this.client.player != null ? this.client.player.getName().getString() : "jogador";
+        return this.client.player != null ? this.client.player.getName().getString() : Lang.t("player.default");
     }
 
     /** Retangulo com cantos "cortados" (estilo pixel art), com borda de 1 pixel. */
@@ -792,13 +800,13 @@ public class TabletScreen extends Screen {
                 if (m.fromPlayer()) {
                     drawHead(ctx, playerSkin(), CHAT_X2 - HEAD, hy, HEAD);
                     bx = CHAT_X2 - HEAD - 3 - bw[i];
-                    fill = 0xFF6B3E6E;
-                    border = 0xFF9A6FA0;
+                    fill = 0xFF3A2E40;
+                    border = 0xFF6A5A72;
                 } else {
                     drawHead(ctx, SCUTE_SKIN, CHAT_X1, hy, HEAD);
                     bx = CHAT_X1 + HEAD + 3;
-                    fill = 0xFF3B4A78;
-                    border = 0xFF8FA0CC;
+                    fill = 0xFF32323A;
+                    border = 0xFF7A7A88;
                 }
                 drawBubbleBox(ctx, bx, by, bw[i], bh[i], fill, border);
                 if (typing && i == n - 1) {
@@ -829,13 +837,13 @@ public class TabletScreen extends Screen {
         int ix2 = CHAT_X2;
         int iy1 = CHAT_BOTTOM + 2;
         int iy2 = SCREEN_Y + SCREEN_H - 3;
-        drawBubbleBox(ctx, ix1, iy1, ix2 - ix1, iy2 - iy1, 0xFF05082A, COLOR_LINE);
+        drawBubbleBox(ctx, ix1, iy1, ix2 - ix1, iy2 - iy1, 0xFF0A0A0C, COLOR_LINE);
 
         double ik = k;
         double ty = iy1 + (iy2 - iy1 - 8 * ik) / 2.0 + ik / 2.0;
         boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
         if (chatInput.isEmpty()) {
-            drawText(ctx, Text.literal("Digite uma mensagem...").asOrderedText(), ix1 + 4, ty, ik, 0xFF707AA8);
+            drawText(ctx, Text.literal(Lang.t("chat.placeholder")).asOrderedText(), ix1 + 4, ty, ik, 0xFF6C6C78);
             if (blink) drawText(ctx, Text.literal("_").asOrderedText(), ix1 + 4, ty, ik, 0xFFFFFFFF);
         } else {
             String shown = chatInput;
@@ -868,7 +876,7 @@ public class TabletScreen extends Screen {
 
         // cabecalho
         double hk = k * 1.15;
-        drawTextCentered(ctx, Text.literal("Clima").asOrderedText(),
+        drawTextCentered(ctx, Text.literal(Lang.t("app.weather")).asOrderedText(),
                 (CHAT_X1 + CHAT_X2) / 2.0, CHAT_HEADER_Y + (CHAT_HEADER_H - 8 * hk) / 2.0 - 0.5, hk, 0xFFFFFFFF);
         ctx.fill(CHAT_X1, CHAT_TOP - 1, CHAT_X2, CHAT_TOP, COLOR_LINE);
 
@@ -888,25 +896,25 @@ public class TabletScreen extends Screen {
         drawText(ctx, Text.literal(w.title).asOrderedText(), rx, sy, tk, 0xFFFFFFFF);
 
         int badgeY = (int) Math.round(sy + 8 * tk + 5);
-        int badgeW = (int) Math.ceil(this.textRenderer.getWidth(w.rating.label) * k) + 10;
+        int badgeW = (int) Math.ceil(this.textRenderer.getWidth(w.rating.label()) * k) + 10;
         int badgeH = (int) Math.ceil(8 * k) + 5;
         int dark = 0xFF000000 | (((w.rating.color >> 16 & 0xFF) / 4) << 16)
                 | (((w.rating.color >> 8 & 0xFF) / 4) << 8) | ((w.rating.color & 0xFF) / 4);
         drawBubbleBox(ctx, rx, badgeY, badgeW, badgeH, dark, w.rating.color);
-        drawTextCentered(ctx, Text.literal(w.rating.label).asOrderedText(), rx + badgeW / 2.0,
+        drawTextCentered(ctx, Text.literal(w.rating.label()).asOrderedText(), rx + badgeW / 2.0,
                 badgeY + (badgeH - 8 * k) / 2.0 + k / 2.0, k, w.rating.color);
 
         int maxInfoW = (int) (rw / k);
         double iy = badgeY + badgeH + 5;
         java.util.List<String> infos = new java.util.ArrayList<>();
-        infos.add("Hora: " + w.time + "  (dia " + w.day + ")");
-        infos.add("Bioma: " + w.biome);
+        infos.add(Lang.t("weather.time", w.time, w.day));
+        infos.add(Lang.t("weather.biome", w.biome));
         if (w.hasPrecipitation() || w.kind == WeatherInfo.Kind.OVERCAST) {
-            infos.add((w.kind == WeatherInfo.Kind.SNOW ? "Neve: " : "Chuva: ") + Math.round(w.intensity * 100) + "%");
+            infos.add(Lang.t(w.kind == WeatherInfo.Kind.SNOW ? "weather.snow" : "weather.rain", Math.round(w.intensity * 100)));
         }
         for (String line : infos) {
             drawText(ctx, Text.literal(this.textRenderer.trimToWidth(line, maxInfoW)).asOrderedText(),
-                    rx, iy, k, 0xFFC8D0F0);
+                    rx, iy, k, 0xFFC4C4D0);
             iy += lh + 1;
         }
 
@@ -915,7 +923,7 @@ public class TabletScreen extends Screen {
         final int boxX2 = CHAT_X2;
         final int boxY1 = sy + sh + 6;
         final int boxY2 = SCREEN_Y + SCREEN_H - 4;
-        drawBubbleBox(ctx, boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1, 0xFF05082A, COLOR_LINE);
+        drawBubbleBox(ctx, boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1, 0xFF0A0A0C, COLOR_LINE);
 
         final int padX = 4;
         int textW = (int) ((boxX2 - boxX1 - 2 * padX - 6) / k);
@@ -935,10 +943,10 @@ public class TabletScreen extends Screen {
         if (maxScroll > 0) {
             // setinhas: ha mais texto acima/abaixo
             if (weatherScroll > 0) {
-                drawText(ctx, Text.literal("^").asOrderedText(), boxX2 - 7, boxY1 + 2, k, 0xFFA0A8D0);
+                drawText(ctx, Text.literal("^").asOrderedText(), boxX2 - 7, boxY1 + 2, k, 0xFF9A9AA8);
             }
             if (weatherScroll < maxScroll) {
-                drawText(ctx, Text.literal("v").asOrderedText(), boxX2 - 7, boxY2 - 3 - 8 * k, k, 0xFFA0A8D0);
+                drawText(ctx, Text.literal("v").asOrderedText(), boxX2 - 7, boxY2 - 3 - 8 * k, k, 0xFF9A9AA8);
             }
         }
 
@@ -961,9 +969,9 @@ public class TabletScreen extends Screen {
     private void drawNotes(DrawContext ctx) {
         final double k = chatK();
         final double lh = 9 * k;
-        drawScreenFrame(ctx, "Notas");
+        drawScreenFrame(ctx, Lang.t("app.notes"));
 
-        drawBubbleBox(ctx, NOTES_X1, NOTES_Y1, NOTES_X2 - NOTES_X1, NOTES_Y2 - NOTES_Y1, 0xFF05082A, COLOR_LINE);
+        drawBubbleBox(ctx, NOTES_X1, NOTES_Y1, NOTES_X2 - NOTES_X1, NOTES_Y2 - NOTES_Y1, 0xFF0A0A0C, COLOR_LINE);
         final int padX = 4;
         int textW = (int) ((NOTES_X2 - NOTES_X1 - 2 * padX - 6) / k);
         boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
@@ -981,17 +989,17 @@ public class TabletScreen extends Screen {
         }
         if (maxScroll > 0) {
             if (first > 0) {
-                drawText(ctx, Text.literal("^").asOrderedText(), NOTES_X2 - 7, NOTES_Y1 + 2, k, 0xFFA0A8D0);
+                drawText(ctx, Text.literal("^").asOrderedText(), NOTES_X2 - 7, NOTES_Y1 + 2, k, 0xFF9A9AA8);
             }
             if (notesScroll > 0) {
-                drawText(ctx, Text.literal("v").asOrderedText(), NOTES_X2 - 7, NOTES_Y2 - 3 - 8 * k, k, 0xFFA0A8D0);
+                drawText(ctx, Text.literal("v").asOrderedText(), NOTES_X2 - 7, NOTES_Y2 - 3 - 8 * k, k, 0xFF9A9AA8);
             }
         }
         drawBars(ctx);
     }
 
     private void drawClock(DrawContext ctx) {
-        drawScreenFrame(ctx, "Rel\u00f3gio");
+        drawScreenFrame(ctx, Lang.t("app.clock"));
         LocalTime now = LocalTime.now();
         String hh = String.format("%02d", now.getHour());
         String mm = String.format("%02d", now.getMinute());
@@ -1010,9 +1018,9 @@ public class TabletScreen extends Screen {
         int cardY = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2 - cardH / 2;
 
         // cartao: borda dupla + brilho suave no topo
-        drawBubbleBox(ctx, cardX, cardY, cardW, cardH, 0xFF0D1470, 0xFF8FA0CC);
-        drawBubbleBox(ctx, cardX + 2, cardY + 2, cardW - 4, cardH - 4, 0xFF070C3E, 0xFF2A3580);
-        ctx.fill(cardX + 5, cardY + 3, cardX + cardW - 5, cardY + 4, 0xFF3B4A9A);
+        drawBubbleBox(ctx, cardX, cardY, cardW, cardH, 0xFF16161A, 0xFF7A7A88);
+        drawBubbleBox(ctx, cardX + 2, cardY + 2, cardW - 4, cardH - 4, 0xFF0E0E11, 0xFF2C2C34);
+        ctx.fill(cardX + 5, cardY + 3, cardX + cardW - 5, cardY + 4, 0xFF4A4A58);
 
         // horas : minutos (os dois pontos piscam) + segundos menores, alinhados pela base
         double totalW = (2 * wHH + wCol) * k + 4 + wHH * ks;
@@ -1021,22 +1029,22 @@ public class TabletScreen extends Screen {
         boolean on = (System.currentTimeMillis() / 500) % 2 == 0;
         drawText(ctx, Text.literal(hh).asOrderedText(), x, y, k, 0xFFFFFFFF);
         x += wHH * k;
-        drawText(ctx, Text.literal(":").asOrderedText(), x, y, k, on ? 0xFFFFFFFF : 0xFF4A5590);
+        drawText(ctx, Text.literal(":").asOrderedText(), x, y, k, on ? 0xFFFFFFFF : 0xFF3C3C46);
         x += wCol * k;
         drawText(ctx, Text.literal(mm).asOrderedText(), x, y, k, 0xFFFFFFFF);
         x += wHH * k + 4;
-        drawText(ctx, Text.literal(ss).asOrderedText(), x, y + 8 * k - 8 * ks, ks, 0xFF9FB0FF);
+        drawText(ctx, Text.literal(ss).asOrderedText(), x, y + 8 * k - 8 * ks, ks, 0xFFB0B0C0);
 
         // barra dos segundos (com marcas a cada 15 s)
         int bx1 = cardX + 12;
         int bx2 = cardX + cardW - 12;
         int by = cardY + cardH - 10;
-        ctx.fill(bx1, by, bx2, by + 3, 0xFF1B2266);
+        ctx.fill(bx1, by, bx2, by + 3, 0xFF1C1C22);
         int fillW = (int) ((bx2 - bx1) * (now.getSecond() + 1) / 60.0);
         ctx.fill(bx1, by, bx1 + fillW, by + 3, 0xFF5E7BFF);
         for (int i = 0; i <= 4; i++) {
             int tx = Math.min(bx2 - 1, bx1 + (bx2 - bx1) * i / 4);
-            ctx.fill(tx, by + 4, tx + 1, by + 6, 0xFF8FA0CC);
+            ctx.fill(tx, by + 4, tx + 1, by + 6, 0xFF7A7A88);
         }
         drawBars(ctx);
     }
@@ -1047,7 +1055,7 @@ public class TabletScreen extends Screen {
 
     private void drawMusic(DrawContext ctx, double pmx, double pmy) {
         final double k = chatK();
-        drawScreenFrame(ctx, "M\u00fasica");
+        drawScreenFrame(ctx, Lang.t("app.music"));
 
         final int total = MusicPlayer.TRACKS.length;
         final int visible = musicVisible();
@@ -1062,22 +1070,22 @@ public class TabletScreen extends Screen {
             int y = MUS_TOP + r * MUS_ROW_H;
             boolean cur = playing && i == MusicPlayer.current();
             boolean hover = inRect(pmx, pmy, CHAT_X1, y, rowX2 - CHAT_X1, MUS_ROW_H);
-            int fill = cur ? 0xFF2E7D32 : hover ? 0xFF3B4A78 : (i % 2 == 0 ? 0xFF111A66 : 0xFF0F1658);
+            int fill = cur ? 0xFF2E7D32 : hover ? 0xFF32323A : (i % 2 == 0 ? 0xFF18181C : 0xFF141417);
             ctx.fill(CHAT_X1, y, rowX2, y + MUS_ROW_H - 1, fill);
             MusicPlayer.Track t = MusicPlayer.TRACKS[i];
             double ty = y + (MUS_ROW_H - 1 - 8 * k) / 2.0 + k / 2.0;
             drawText(ctx, Text.literal((cur ? "> " : "") + t.name()).asOrderedText(), CHAT_X1 + 4, ty, k, 0xFFFFFFFF);
             String artist = t.artist();
             double aw = this.textRenderer.getWidth(artist) * k;
-            drawText(ctx, Text.literal(artist).asOrderedText(), rowX2 - 4 - aw, ty, k, cur ? 0xFFD0FFD0 : 0xFFA0A8D0);
+            drawText(ctx, Text.literal(artist).asOrderedText(), rowX2 - 4 - aw, ty, k, cur ? 0xFFD0FFD0 : 0xFF9A9AA8);
         }
         if (maxScroll > 0) {
             // barra de rolagem
             int trackH = MUS_BOTTOM - MUS_TOP;
             int barH = Math.max(6, trackH * visible / total);
             int barY = MUS_TOP + (trackH - barH) * musicScroll / maxScroll;
-            ctx.fill(CHAT_X2 - 3, MUS_TOP, CHAT_X2, MUS_BOTTOM, 0xFF0A0F3A);
-            ctx.fill(CHAT_X2 - 3, barY, CHAT_X2, barY + barH, 0xFF8FA0CC);
+            ctx.fill(CHAT_X2 - 3, MUS_TOP, CHAT_X2, MUS_BOTTOM, 0xFF0E0E11);
+            ctx.fill(CHAT_X2 - 3, barY, CHAT_X2, barY + barH, 0xFF7A7A88);
         }
 
         // barra de baixo: "tocando agora" + botao Parar
@@ -1086,16 +1094,16 @@ public class TabletScreen extends Screen {
         String status;
         if (playing && MusicPlayer.current() >= 0) {
             long s = MusicPlayer.elapsedSeconds();
-            status = "Tocando: " + MusicPlayer.TRACKS[MusicPlayer.current()].name()
-                    + "  " + (s / 60) + ":" + String.format("%02d", s % 60);
+            status = Lang.t("music.playing", MusicPlayer.TRACKS[MusicPlayer.current()].name(),
+                    (s / 60) + ":" + String.format("%02d", s % 60));
         } else {
-            status = "Escolha uma m\u00fasica";
+            status = Lang.t("music.choose");
         }
         int maxW = (int) ((MUS_STOP_X - CHAT_X1 - 8) / k);
         double ty = MUS_STOP_Y + (MUS_STOP_H - 8 * k) / 2.0 + k / 2.0;
         drawText(ctx, Text.literal(this.textRenderer.trimToWidth(status, maxW)).asOrderedText(),
-                CHAT_X1 + 2, ty, k, playing ? 0xFF80FF90 : 0xFFA0A8D0);
-        drawButton(ctx, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H, "Parar",
+                CHAT_X1 + 2, ty, k, playing ? 0xFF80FF90 : 0xFF9A9AA8);
+        drawButton(ctx, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H, Lang.t("music.stop"),
                 inRect(pmx, pmy, MUS_STOP_X, MUS_STOP_Y, MUS_STOP_W, MUS_STOP_H), playing);
         drawBars(ctx);
     }
@@ -1126,7 +1134,7 @@ public class TabletScreen extends Screen {
         drawScreenFrame(ctx, devTitle);
         double tk = k * 1.5;
         int wrapW = (int) ((CHAT_X2 - CHAT_X1 - 10) / tk);
-        List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal("Aplicativo em Desenvolvimento ;("), wrapW);
+        List<OrderedText> lines = this.textRenderer.wrapLines(Text.literal(Lang.t("dev.text")), wrapW);
         double lh = 9 * tk;
         double y = (CHAT_TOP + SCREEN_Y + SCREEN_H) / 2.0 - lines.size() * lh / 2.0;
         for (OrderedText l : lines) {
@@ -1156,15 +1164,15 @@ public class TabletScreen extends Screen {
         String l2;
         int c1 = 0xFFFFFF;
         switch (st) {
-            case OFF -> { l1 = "Minecraft desligado"; l2 = "Clique para iniciar"; }
+            case OFF -> { l1 = Lang.t("child.off"); l2 = Lang.t("child.click_start"); }
             case STARTING -> {
                 int dots = (int) ((System.currentTimeMillis() / 400) % 4);
-                l1 = "Iniciando o Minecraft" + ".".repeat(dots);
-                l2 = "Pode levar um minuto na primeira vez.";
+                l1 = Lang.t("child.starting") + ".".repeat(dots);
+                l2 = Lang.t("child.first_time");
             }
             case DEAD -> {
-                l1 = "O Minecraft encerrou (veja tablet_inception/child.log)";
-                l2 = "Clique para tentar novamente";
+                l1 = Lang.t("child.dead");
+                l2 = Lang.t("child.retry");
                 c1 = 0xFF8080;
             }
             default -> { l1 = ""; l2 = ""; }
@@ -1377,7 +1385,7 @@ public class TabletScreen extends Screen {
                 return true;
             }
             if (app == 1 || app == 2 || app == APP_BOOKS || app == APP_STORE) {
-                devTitle = APP_NAMES[app];     // Camera, Galeria, Livros e App Store: em desenvolvimento
+                devTitle = appName(app);     // Camera, Galeria, Livros e App Store: em desenvolvimento
                 view = View.DEV;
                 return true;
             }
